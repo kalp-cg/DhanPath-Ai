@@ -17,6 +17,69 @@ function getMonthStartIso(): string {
   return first.toISOString();
 }
 
+export async function resolveFamilyIdForUser({
+  userId,
+  email,
+}: {
+  userId: string;
+  email: string;
+}): Promise<string | null> {
+  const supabase = createSupabaseStorageClient();
+
+  // Prefer explicit membership by authenticated user id.
+  const memberWithStatus = await supabase
+    .from("family_members")
+    .select("family_id,status,joined_at")
+    .eq("user_id", userId)
+    .in("status", ["accepted", "active"])
+    .order("joined_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (memberWithStatus.data?.family_id != null) {
+    return String(memberWithStatus.data.family_id);
+  }
+
+  if (memberWithStatus.error && !isMissingColumnError(memberWithStatus.error.message)) {
+    throw new Error(`Family membership query failed: ${memberWithStatus.error.message}`);
+  }
+
+  const memberLegacy = await supabase
+    .from("family_members")
+    .select("family_id,joined_at")
+    .eq("user_id", userId)
+    .order("joined_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (memberLegacy.error) {
+    throw new Error(`Legacy membership query failed: ${memberLegacy.error.message}`);
+  }
+
+  if (memberLegacy.data?.family_id != null) {
+    return String(memberLegacy.data.family_id);
+  }
+
+  // Fallback by invited email if invitation schema exists.
+  const invite = await supabase
+    .from("family_invitations")
+    .select("family_id,status")
+    .eq("invited_email", email.trim().toLowerCase())
+    .in("status", ["accepted", "active"])
+    .limit(1)
+    .maybeSingle();
+
+  if (invite.error && !isMissingColumnError(invite.error.message)) {
+    throw new Error(`Invitation query failed: ${invite.error.message}`);
+  }
+
+  if (invite.data?.family_id != null) {
+    return String(invite.data.family_id);
+  }
+
+  return null;
+}
+
 export async function fetchFamilySummaryFromStorage(
   familyId: string,
   requesterUserId: string,
