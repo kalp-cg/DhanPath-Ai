@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
           name: user.name,
           familyId: user.familyId ? String(user.familyId) : null,
         },
+        token,
       },
       { status: 200 },
     );

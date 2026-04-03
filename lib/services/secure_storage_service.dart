@@ -20,6 +20,9 @@ class SecureStorageService {
   static const String _appLockEnabledKey = 'app_lock_enabled';
   static const String _biometricEnabledKey = 'biometric_enabled';
   static const String _autoLockTimeoutKey = 'auto_lock_timeout';
+  static const String _cloudSyncEmailKey = 'cloud_sync_email';
+  static const String _cloudSyncPasswordKey = 'cloud_sync_password';
+  static const String _cloudSyncTokenKey = 'cloud_sync_token';
 
   /// Generate a random 16-byte salt
   String _generateSalt() {
@@ -113,5 +116,42 @@ class SecureStorageService {
   /// Clear all secure data
   Future<void> clearAll() async {
     await _storage.deleteAll();
+  }
+
+  // Cloud website sync credentials (stored encrypted via flutter_secure_storage)
+  Future<void> setCloudSyncCredentials({
+    required String email,
+    required String password,
+  }) async {
+    await _storage.write(
+      key: _cloudSyncEmailKey,
+      value: email.trim().toLowerCase(),
+    );
+    await _storage.write(key: _cloudSyncPasswordKey, value: password);
+  }
+
+  Future<String?> getCloudSyncEmail() async {
+    return _storage.read(key: _cloudSyncEmailKey);
+  }
+
+  Future<String?> getCloudSyncPassword() async {
+    return _storage.read(key: _cloudSyncPasswordKey);
+  }
+
+  Future<void> clearCloudSyncCredentials() async {
+    await _storage.delete(key: _cloudSyncEmailKey);
+    await _storage.delete(key: _cloudSyncPasswordKey);
+  }
+
+  Future<void> setCloudSyncToken(String token) async {
+    await _storage.write(key: _cloudSyncTokenKey, value: token);
+  }
+
+  Future<String?> getCloudSyncToken() async {
+    return _storage.read(key: _cloudSyncTokenKey);
+  }
+
+  Future<void> clearCloudSyncToken() async {
+    await _storage.delete(key: _cloudSyncTokenKey);
   }
 }

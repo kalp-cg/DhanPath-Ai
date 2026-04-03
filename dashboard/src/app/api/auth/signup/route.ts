@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
 
     const token = signAuthToken({ userId: String(user._id), email });
     const res = NextResponse.json(
-      { user: { id: String(user._id), email: user.email, name: user.name, familyId: user.familyId ?? null } },
+      {
+        user: { id: String(user._id), email: user.email, name: user.name, familyId: user.familyId ?? null },
+        token,
+      },
       { status: 201 },
     );
 
