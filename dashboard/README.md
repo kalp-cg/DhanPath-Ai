@@ -1,61 +1,67 @@
-# DhanPath AI Dashboard (Next.js)
+# DhanPath AI Dashboard (Mongo Rewrite)
 
-This folder contains the web admin dashboard for Family Mode.
+Fresh Next.js dashboard with a basic SaaS workflow:
+- Email/password signup and login (JWT + HTTP-only cookie)
+- Family create/join using invite code
+- Manual transactions stored per family
+- Family summary (member spend, top categories, recent transactions)
 
-## Why Next.js Here
+## Stack
 
-- App Router pages for a real web app structure
-- API routes for server-side logic and business rules
-- Node backend service layer owns all read/write operations
-- Supabase is used as storage only (database persistence)
-- Easy deployment on Vercel
+- Next.js App Router (TypeScript)
+- MongoDB + Mongoose
+- `bcryptjs` for password hashing
+- `jsonwebtoken` for stateless auth
 
-## Quick Start
+## Environment
+
+Create `.env.local` from `.env.example`:
 
 ```bash
-cd dashboard
-npm install
 cp .env.example .env.local
+```
+
+Required values:
+
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB=dhanpath
+JWT_SECRET=change_this_to_a_long_random_string
+```
+
+## Run
+
+```bash
+npm install
 npm run dev
 ```
 
 Open `http://localhost:3000`.
 
-## Environment Variables
+## Workflow
 
-Set these in `.env.local`:
+1. Go to `/auth` and sign up or login.
+2. Create a family or join with invite code.
+3. Add manual transactions.
+4. See live family summary on `/family`.
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-GEMINI_API_KEY=
-```
+## API Endpoints
 
-No static/mock fallback is used by API routes. Supabase config is required.
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/family/create`
+- `POST /api/family/join`
+- `GET /api/family/summary`
+- `GET /api/transactions`
+- `POST /api/transactions`
 
-## Routes
-
-- `/` landing page with build status and links
-- `/family` family dashboard (member bars + runway section)
-- `/api/family/summary` family summary JSON
-- `/api/family/workspace` create workspace (POST)
-- `/api/family/invite` invite member by email (POST)
-- `/api/family/invitations/pending` fetch pending invites for logged-in email (GET)
-- `/api/family/invitations/accept` accept invite token (POST)
-- `/api/transactions` create transaction (POST)
-- `/api/forecast` budget forecast JSON
-
-## Architecture Note
-
-- Frontend never talks directly to Supabase.
-- Next.js API routes act as backend endpoints.
-- Backend service layer in `src/server/` handles Supabase queries and aggregation logic.
-
-## Verify Build
+## Validation
 
 ```bash
 npm run lint
 npm run build
 ```
+
+Both commands pass on this rewrite.
