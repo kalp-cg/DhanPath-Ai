@@ -26,8 +26,7 @@ export async function resolveFamilyIdForUser({
 }): Promise<string | null> {
   const supabase = createSupabaseStorageClient();
 
-  // Prefer explicit membership by authenticated user id.
-  const memberWithStatus = await supabase
+  const withStatus = await supabase
     .from("family_members")
     .select("family_id,status,joined_at")
     .eq("user_id", userId)
@@ -36,15 +35,15 @@ export async function resolveFamilyIdForUser({
     .limit(1)
     .maybeSingle();
 
-  if (memberWithStatus.data?.family_id != null) {
-    return String(memberWithStatus.data.family_id);
+  if (withStatus.data?.family_id != null) {
+    return String(withStatus.data.family_id);
   }
 
-  if (memberWithStatus.error && !isMissingColumnError(memberWithStatus.error.message)) {
-    throw new Error(`Family membership query failed: ${memberWithStatus.error.message}`);
+  if (withStatus.error && !isMissingColumnError(withStatus.error.message)) {
+    throw new Error(`Family membership query failed: ${withStatus.error.message}`);
   }
 
-  const memberLegacy = await supabase
+  const legacy = await supabase
     .from("family_members")
     .select("family_id,joined_at")
     .eq("user_id", userId)
@@ -52,15 +51,14 @@ export async function resolveFamilyIdForUser({
     .limit(1)
     .maybeSingle();
 
-  if (memberLegacy.error) {
-    throw new Error(`Legacy membership query failed: ${memberLegacy.error.message}`);
+  if (legacy.error) {
+    throw new Error(`Legacy membership query failed: ${legacy.error.message}`);
   }
 
-  if (memberLegacy.data?.family_id != null) {
-    return String(memberLegacy.data.family_id);
+  if (legacy.data?.family_id != null) {
+    return String(legacy.data.family_id);
   }
 
-  // Fallback by invited email if invitation schema exists.
   const invite = await supabase
     .from("family_invitations")
     .select("family_id,status")

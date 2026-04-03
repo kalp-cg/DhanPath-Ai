@@ -8,9 +8,9 @@ import '../domain/usecases/add_transaction_usecase.dart';
 import '../domain/usecases/delete_transaction_usecase.dart';
 import '../domain/usecases/search_transactions_usecase.dart';
 import '../services/database_helper.dart';
+import '../services/cloud_sync_service.dart';
 import '../core/parsers/bank_parser_factory.dart';
 import '../core/utils/result.dart';
-import '../services/cloud_sync_service.dart';
 import '../services/sms_service.dart';
 import '../services/supabase_auth_service.dart';
 import '../services/user_preferences_service.dart';
@@ -388,22 +388,24 @@ class TransactionProvider extends ChangeNotifier {
     try {
       final auth = SupabaseAuthService.instance;
       if (!auth.isConfigured) return;
+
       final token = auth.currentSession?.accessToken;
       if (token == null || token.isEmpty) return;
 
       final prefs = UserPreferencesService();
       final dashboardUrl = await prefs.getCloudDashboardUrl();
       if (dashboardUrl.isEmpty) return;
-      final familyId = await prefs.getCloudFamilyId();
 
+      final familyId = await prefs.getCloudFamilyId();
       final syncer = CloudSyncService(
         dashboardUrl: dashboardUrl,
         accessToken: token,
         familyId: familyId.isEmpty ? null : familyId,
       );
+
       await syncer.syncAll();
     } catch (e) {
-      // Never block user transaction flow for sync failures.
+      // Do not interrupt local transaction flow when cloud sync fails.
       debugPrint('Cloud auto-sync skipped: $e');
     }
   }

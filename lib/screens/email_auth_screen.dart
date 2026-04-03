@@ -43,12 +43,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
   Future<void> _submit() async {
     final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text;
-
     if (email.isEmpty || password.isEmpty) {
       setState(() => _error = 'Email and password are required.');
       return;
     }
-
     if (password.length < 6) {
       setState(() => _error = 'Password must be at least 6 characters.');
       return;
@@ -59,20 +57,18 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
       _error = null;
       _info = null;
     });
-
     try {
       await SupabaseAuthService.instance.authenticateWithEmailPassword(
         email: email,
         password: password,
       );
       await _preferences.setCloudEmail(email);
-
       if (!mounted) return;
       widget.onSuccess();
     } catch (e) {
       if (!mounted) return;
+      final message = e.toString();
       setState(() {
-        final message = e.toString();
         if (message.toLowerCase().contains('account created')) {
           _info = message;
         } else {
@@ -99,7 +95,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Enter email and password. New account is created automatically if needed.',
+                  'Sign in with email and password. New account is created automatically if needed.',
                 ),
                 const SizedBox(height: 12),
                 TextField(

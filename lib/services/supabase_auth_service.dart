@@ -119,7 +119,6 @@ class SupabaseAuthService {
           message.contains('email not confirmed') ||
           message.contains('user not found') ||
           message.contains('invalid email or password');
-
       if (!shouldCreate) {
         rethrow;
       }
@@ -130,10 +129,9 @@ class SupabaseAuthService {
       password: password,
     );
 
-    // If email confirmation is required, session may be null.
     if (signUp.session == null) {
       throw StateError(
-        'Account created. Please verify your email, then sign in again.',
+        'Account created. Verify your email once, then sign in again.',
       );
     }
 
@@ -168,11 +166,23 @@ class SupabaseAuthService {
     required String userId,
     required String email,
   }) async {
+    final normalized = email.trim().toLowerCase();
+
     await Supabase.instance.client.from('users').upsert({
       'id': userId,
-      'email': email.trim().toLowerCase(),
-      'name': email.split('@').first,
+      'email': normalized,
+      'name': normalized.split('@').first,
     });
+
+    // Keep legacy compatibility if older schema still uses profiles.
+    try {
+      await Supabase.instance.client.from('profiles').upsert({
+        'id': userId,
+        'email': normalized,
+      });
+    } catch (_) {
+      // Ignore if profiles table does not exist.
+    }
   }
 
   Future<void> signOut() async {
