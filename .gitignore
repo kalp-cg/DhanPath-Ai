@@ -37,5 +37,8 @@ Thumbs.db
 # Local data files
 *.db
 
+# Local workspace links
+Link to DhanPath
+
 # Flutter plugin dependency lock file (generated)
 .flutter-plugins-dependencies
