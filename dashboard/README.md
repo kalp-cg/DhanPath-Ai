@@ -36,9 +36,16 @@ If Supabase is not configured, APIs return mock demo data so the dashboard still
 ## Routes
 
 - `/` landing page with build status and links
+- `/auth` Supabase magic-link sign-in page
 - `/family` family dashboard (member bars + runway section)
 - `/api/family/summary` family summary JSON
 - `/api/forecast` budget forecast JSON
+
+## Auth + RLS Behavior
+
+- When Supabase env is configured, `/api/family/summary` requires `Authorization: Bearer <access_token>`.
+- The `/family` page reads current session token from Supabase Auth and sends it to the API.
+- If no session is available, user is prompted to sign in via `/auth`.
 
 ## Verify Build
 

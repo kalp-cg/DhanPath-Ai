@@ -31,6 +31,9 @@ export default function Home() {
             <Link className="cta primary" href="/family">
               Open Family Dashboard
             </Link>
+            <Link className="cta secondary" href="/auth">
+              Sign In
+            </Link>
             <Link className="cta secondary" href="/api/family/summary">
               Test Summary API
             </Link>

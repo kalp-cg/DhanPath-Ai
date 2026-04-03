@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { ForecastResult } from "@/lib/forecast";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { FamilySummary } from "@/types/family";
 
 type ApiState = {
@@ -25,7 +27,34 @@ export default function FamilyDashboardPage() {
 
     async function load() {
       try {
-        const summaryRes = await fetch("/api/family/summary", { cache: "no-store" });
+        const supabase = createSupabaseBrowserClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          if (!active) return;
+          setState({
+            summary: null,
+            forecast: null,
+            loading: false,
+            error: "Please sign in first to access family data.",
+          });
+          return;
+        }
+
+        const summaryRes = await fetch("/api/family/summary", {
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (!summaryRes.ok) {
+          const err = (await summaryRes.json()) as { error?: string };
+          throw new Error(err.error ?? "Summary API failed");
+        }
+
         const summary = (await summaryRes.json()) as FamilySummary;
 
         const now = new Date();
@@ -65,7 +94,19 @@ export default function FamilyDashboardPage() {
   }
 
   if (state.error || !state.summary || !state.forecast) {
-    return <div className="page-shell">Could not load dashboard. {state.error ?? "Try again."}</div>;
+    return (
+      <div className="page-shell">
+        <section className="card">
+          <h2>Could not load dashboard</h2>
+          <p>{state.error ?? "Try again."}</p>
+          <div className="chips" style={{ marginTop: 12 }}>
+            <Link className="cta primary" href="/auth">
+              Sign In
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
   }
 
   return (

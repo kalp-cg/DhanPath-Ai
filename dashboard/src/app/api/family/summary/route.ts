@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { mockFamilySummary } from "@/lib/mock-family";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase-server";
+import { createSupabaseRlsClient, hasSupabaseEnv } from "@/lib/supabase-server";
 import { FamilyMember, FamilySummary } from "@/types/family";
 
 function getMonthStartIso(): string {
@@ -20,8 +20,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ...mockFamilySummary, familyId, source: "mock" });
   }
 
+  const authHeader = request.headers.get("authorization") ?? "";
+  const accessToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length)
+    : "";
+
+  if (!accessToken) {
+    return NextResponse.json(
+      {
+        error: "Missing bearer token. Sign in via /auth and send session token.",
+      },
+      { status: 401 },
+    );
+  }
+
   try {
-    const supabase = createSupabaseServerClient();
+    const supabase = createSupabaseRlsClient(accessToken);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Invalid user session" }, { status: 401 });
+    }
 
     const [{ data: familyRow, error: familyError }, { data: memberRows, error: memberError }, { data: txRows, error: txError }] =
       await Promise.all([
@@ -37,13 +60,24 @@ export async function GET(request: NextRequest) {
     if (familyError || memberError || txError) {
       return NextResponse.json(
         {
-          ...mockFamilySummary,
-          familyId,
-          source: "mock",
-          error: familyError?.message || memberError?.message || txError?.message,
+          error:
+            familyError?.message || memberError?.message || txError?.message,
         },
-        { status: 200 },
+        { status: 403 },
       );
+    }
+
+    const userIds = (memberRows ?? []).map((row) => String(row.user_id));
+    const { data: userRows } = userIds.length
+      ? await supabase
+          .from("users")
+          .select("id,name")
+          .in("id", userIds)
+      : { data: [] as Array<{ id: string; name: string | null }> };
+
+    const userNameMap = new Map<string, string>();
+    for (const row of userRows ?? []) {
+      userNameMap.set(String(row.id), row.name?.trim() || String(row.id).slice(0, 8));
     }
 
     const memberSpendMap = new Map<string, number>();
@@ -66,7 +100,9 @@ export async function GET(request: NextRequest) {
       const role: FamilyMember["role"] = member.role === "admin" ? "admin" : "member";
       return {
         userId: String(member.user_id),
-        name: String(member.user_id).slice(0, 8),
+        name:
+          userNameMap.get(String(member.user_id)) ||
+          String(member.user_id).slice(0, 8),
         role,
         monthlySpend: Number(memberSpendMap.get(String(member.user_id)) ?? 0),
       };
