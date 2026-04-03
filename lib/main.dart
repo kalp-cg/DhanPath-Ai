@@ -22,10 +22,12 @@ import 'screens/more_screen.dart';
 import 'screens/app_lock_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/email_auth_screen.dart';
 import 'services/secure_storage_service.dart';
 import 'services/notification_service.dart';
 import 'services/smart_notification_engine.dart';
 import 'services/user_preferences_service.dart';
+import 'services/supabase_auth_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 
 void main() async {
@@ -75,6 +77,13 @@ void main() async {
         await CurrencyHelper.initialize();
       } catch (e) {
         debugPrint('Currency init error: $e');
+      }
+
+      // Initialize Supabase authentication (if configured via --dart-define)
+      try {
+        await SupabaseAuthService.instance.initialize();
+      } catch (e) {
+        debugPrint('Supabase init error: $e');
       }
 
       // Use edge-to-edge without deprecated bar color APIs (Android 15+).
@@ -181,6 +190,55 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
   Widget build(BuildContext context) {
     if (_showSplash) {
       return SplashScreen(onComplete: _onSplashComplete);
+    }
+    return const AuthGuard();
+  }
+}
+
+/// Ensures user has signed in with email before continuing.
+class AuthGuard extends StatefulWidget {
+  const AuthGuard({super.key});
+
+  @override
+  State<AuthGuard> createState() => _AuthGuardState();
+}
+
+class _AuthGuardState extends State<AuthGuard> {
+  bool _isLoading = true;
+  bool _isAuthenticated = false;
+  bool _isConfigured = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final auth = SupabaseAuthService.instance;
+    if (mounted) {
+      setState(() {
+        _isConfigured = auth.isConfigured;
+        _isAuthenticated = auth.currentSession != null;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _onAuthSuccess() {
+    setState(() => _isAuthenticated = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!_isConfigured) {
+      return const OnboardingGuard();
+    }
+    if (!_isAuthenticated) {
+      return EmailAuthScreen(onSuccess: _onAuthSuccess);
     }
     return const OnboardingGuard();
   }
