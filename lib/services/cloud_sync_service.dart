@@ -36,12 +36,29 @@ class CloudSyncService {
       }),
     );
 
-    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    Map<String, dynamic> payload = <String, dynamic>{};
+    final rawBody = response.body.trim();
+    if (rawBody.isNotEmpty) {
+      try {
+        payload = jsonDecode(rawBody) as Map<String, dynamic>;
+      } catch (_) {
+        payload = <String, dynamic>{};
+      }
+    }
+
     if (response.statusCode != 200) {
-      throw Exception(
-        payload['error'] ??
-            'Dashboard login failed (${response.statusCode}).',
-      );
+      final serverError = payload['error'] as String?;
+      if (serverError != null && serverError.trim().isNotEmpty) {
+        throw Exception(serverError);
+      }
+
+      if (response.statusCode == 401) {
+        throw Exception('Invalid website email or password.');
+      }
+      if (response.statusCode == 404) {
+        throw Exception('Dashboard URL is incorrect (auth endpoint not found).');
+      }
+      throw Exception('Dashboard login failed (${response.statusCode}).');
     }
 
     final token = (payload['token'] as String?)?.trim();
