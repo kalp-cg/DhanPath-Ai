@@ -27,6 +27,7 @@ export type DailySpend = {
 export type FamilySummary = {
   familyId: string;
   familyName: string;
+  inviteCode?: string | null;
   totalMonthlySpend: number;
   monthlyBudget: number;
   memberBreakdown: FamilyMember[];

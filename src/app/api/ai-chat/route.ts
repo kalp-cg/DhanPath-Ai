@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { askGemini } from "@/lib/gemini";
 import { hasSupabaseStorageEnv, createSupabaseStorageClient } from "@/lib/supabase-server";
+import { requireAuthenticatedUser, requireFamilyMembership } from "@/server/auth";
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthenticatedUser(request);
+  if ("response" in auth) return auth.response;
+
   let body: { question: string; familyId?: string };
   try {
     body = (await request.json()) as { question: string; familyId?: string };
@@ -20,6 +24,12 @@ export async function POST(request: NextRequest) {
 
   if (hasSupabaseStorageEnv() && body.familyId) {
     try {
+      const membership = await requireFamilyMembership({
+        familyId: body.familyId,
+        userId: auth.user.id,
+      });
+      if (!membership.ok) return membership.response;
+
       const supabase = createSupabaseStorageClient();
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();

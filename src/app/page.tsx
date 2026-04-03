@@ -36,7 +36,7 @@ export default function Home() {
             Open Family Dashboard →
           </a>
           <a
-            href="/api/family/summary"
+            href="/family"
             style={{
               display: "inline-flex", alignItems: "center", gap: "0.5rem",
               padding: "0.75rem 1.5rem", borderRadius: 999,
@@ -47,7 +47,7 @@ export default function Home() {
               transition: "border-color 0.15s",
             }}
           >
-            Test API
+            Sign In
           </a>
         </div>
       </div>

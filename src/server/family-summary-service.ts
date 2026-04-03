@@ -6,6 +6,11 @@ const AVATAR_COLORS = [
   "#059669", "#d97706",
 ];
 
+function isMissingColumnError(message?: string): boolean {
+  const m = (message ?? "").toLowerCase();
+  return m.includes("could not find the") || m.includes("column");
+}
+
 function getMonthStartIso(): string {
   const now = new Date();
   const first = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -14,12 +19,46 @@ function getMonthStartIso(): string {
 
 export async function fetchFamilySummaryFromStorage(
   familyId: string,
+  requesterUserId: string,
 ): Promise<FamilySummary> {
   const supabase = createSupabaseStorageClient();
 
-  const [familyRes, memberRes, txRes, budgetRes] = await Promise.all([
-    supabase.from("families").select("id,name").eq("id", familyId).single(),
-    supabase.from("family_members").select("user_id,role").eq("family_id", familyId),
+  let membershipData: { role: string } | null = null;
+  let membershipError: { message?: string } | null = null;
+
+  const membershipWithStatus = await supabase
+    .from("family_members")
+    .select("role,status")
+    .eq("family_id", familyId)
+    .eq("user_id", requesterUserId)
+    .in("status", ["accepted", "active"])
+    .maybeSingle();
+  membershipData = (membershipWithStatus.data as { role: string } | null) ?? null;
+  membershipError = membershipWithStatus.error as { message?: string } | null;
+
+  if (membershipError && isMissingColumnError(membershipError.message)) {
+    const legacyMembership = await supabase
+      .from("family_members")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("user_id", requesterUserId)
+      .maybeSingle();
+    membershipData = (legacyMembership.data as { role: string } | null) ?? null;
+    membershipError = legacyMembership.error as { message?: string } | null;
+  }
+  if (membershipError || !membershipData) {
+    throw new Error("You do not have access to this workspace.");
+  }
+
+  const familyResPromise = supabase.from("families").select("id,name,invite_code").eq("id", familyId).single();
+  const memberResPromise = supabase
+    .from("family_members")
+    .select("user_id,role,status")
+    .eq("family_id", familyId)
+    .in("status", ["accepted", "active"]);
+  const [familyRes, memberResWithStatus, txRes, budgetRes] = await Promise.all([
+    familyResPromise,
+    memberResPromise,
     supabase
       .from("transactions")
       .select("id,user_id,amount,type,category,merchant,source,txn_time")
@@ -34,21 +73,73 @@ export async function fetchFamilySummaryFromStorage(
       .order("month", { ascending: false })
       .limit(1),
   ]);
+  let memberRes: {
+    data: Array<{ user_id: string; role: string; status?: string }> | null;
+    error: { message?: string } | null;
+  } = {
+    data: (memberResWithStatus.data as Array<{ user_id: string; role: string; status?: string }> | null) ?? null,
+    error: memberResWithStatus.error as { message?: string } | null,
+  };
+  if (memberRes.error && isMissingColumnError(memberRes.error.message)) {
+    const legacyMemberRes = await supabase
+      .from("family_members")
+      .select("user_id,role")
+      .eq("family_id", familyId);
+    memberRes = {
+      data: (legacyMemberRes.data as Array<{ user_id: string; role: string }> | null) ?? null,
+      error: legacyMemberRes.error as { message?: string } | null,
+    };
+  }
 
   if (familyRes.error) throw new Error(`Family query failed: ${familyRes.error.message}`);
   if (memberRes.error) throw new Error(`Member query failed: ${memberRes.error.message}`);
   if (txRes.error) throw new Error(`Transaction query failed: ${txRes.error.message}`);
 
-  const userIds = (memberRes.data ?? []).map((row) => String(row.user_id));
-  const userRes = userIds.length
-    ? await supabase.from("users").select("id,name").in("id", userIds)
-    : { data: [] as Array<{ id: string; name: string | null }>, error: null };
-
-  if (userRes.error) throw new Error(`User query failed: ${userRes.error.message}`);
-
+  const memberUserIds = (memberRes.data ?? []).map((row) => String(row.user_id));
+  // Also collect user_ids from transactions for name lookup
+  const txUserIds = Array.from(new Set((txRes.data ?? []).map((tx) => String(tx.user_id))));
+  const allUserIds = Array.from(new Set([...memberUserIds, ...txUserIds]));
+  
   const userNameMap = new Map<string, string>();
-  for (const row of userRes.data ?? []) {
-    userNameMap.set(String(row.id), row.name?.trim() || String(row.id).slice(0, 8));
+  if (allUserIds.length) {
+    let userRes: {
+      data: Array<{ id: string; name?: string | null; email?: string | null }> | null;
+      error: { message?: string } | null;
+    } = {
+      data: null,
+      error: null,
+    };
+    const profileRes = await supabase
+      .from("profiles")
+      .select("id,name,email")
+      .in("id", allUserIds);
+    userRes = {
+      data: (profileRes.data as Array<{ id: string; name?: string | null; email?: string | null }> | null) ?? null,
+      error: profileRes.error as { message?: string } | null,
+    };
+    if (userRes.error && userRes.error.message?.toLowerCase().includes("does not exist")) {
+      const usersRes = await supabase.from("users").select("id,name").in("id", allUserIds);
+      userRes = {
+        data: (usersRes.data as Array<{ id: string; name?: string | null }> | null) ?? null,
+        error: usersRes.error as { message?: string } | null,
+      };
+    }
+    if (userRes.error && !isMissingColumnError(userRes.error.message)) {
+      throw new Error(`User query failed: ${userRes.error.message}`);
+    }
+    for (const row of userRes.data ?? []) {
+      const name = (row as { name?: string | null }).name;
+      const email = (row as { email?: string | null }).email;
+      const id = String((row as { id: string }).id);
+      const display = name?.trim() || email?.trim() || id.slice(0, 8);
+      userNameMap.set(id, display);
+    }
+  }
+
+  for (const userId of allUserIds) {
+    if (userNameMap.has(userId)) continue;
+    const display = userId.slice(0, 8);
+    userNameMap.set(userId, display);
   }
 
   const memberSpendMap = new Map<string, number>();
@@ -80,24 +171,35 @@ export async function fetchFamilySummaryFromStorage(
     };
   });
 
-  const memberBreakdown: FamilyMember[] = (memberRes.data ?? []).map((member, idx) => {
-    const role: FamilyMember["role"] = member.role === "admin" ? "admin" : "member";
-    const userId = String(member.user_id);
-    return {
-      userId,
-      name: userNameMap.get(userId) || userId.slice(0, 8),
-      role,
-      monthlySpend: Number(memberSpendMap.get(userId) ?? 0),
-      avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
-    };
-  });
+  // Build member list: prefer family_members table, fall back to transaction user_ids
+  const registeredMembers = memberRes.data ?? [];
+  const memberBreakdown: FamilyMember[] = registeredMembers.length > 0
+    ? registeredMembers.map((member, idx) => {
+        const role: FamilyMember["role"] = member.role === "admin" ? "admin" : "member";
+        const userId = String(member.user_id);
+        return {
+          userId,
+          name: userNameMap.get(userId) || userId.slice(0, 8),
+          role,
+          monthlySpend: Number(memberSpendMap.get(userId) ?? 0),
+          avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+        };
+      })
+    : Array.from(memberSpendMap.entries()).map(([userId, spend], idx) => ({
+        userId,
+        name: userNameMap.get(userId) || userId.slice(0, 8),
+        role: idx === 0 ? "admin" as const : "member" as const,
+        monthlySpend: spend,
+        avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+      }));
+
 
   const topCategories = Array.from(categorySpendMap.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
     .map(([category, amount]) => ({ category, amount }));
 
-  const totalMonthlySpend = memberBreakdown.reduce((sum, m) => sum + m.monthlySpend, 0);
+  const totalMonthlySpend = Array.from(memberSpendMap.values()).reduce((sum, v) => sum + v, 0);
 
   // Recent transactions (last 10)
   const allTx = txRes.data ?? [];
@@ -121,6 +223,7 @@ export async function fetchFamilySummaryFromStorage(
   return {
     familyId,
     familyName: familyRes.data?.name ?? "Family Workspace",
+    inviteCode: familyRes.data?.invite_code ?? null,
     totalMonthlySpend,
     monthlyBudget,
     memberBreakdown,

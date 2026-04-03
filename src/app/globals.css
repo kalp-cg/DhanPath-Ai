@@ -10,31 +10,24 @@
    ═════════════════════════════════════════════ */
 
 :root {
-  --bg-deep: #0a0e1a;
-  --bg-surface: #111827;
-  --bg-card: rgba(17, 24, 39, 0.65);
-  --bg-glass: rgba(255, 255, 255, 0.04);
-  --border-glass: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(16, 185, 129, 0.25);
+  --bg-deep: #09090b;
+  --bg-surface: #18181b;
+  --bg-card: #09090b;
+  --bg-glass: rgba(255, 255, 255, 0.03);
+  --border-glass: rgba(255, 255, 255, 0.05);
 
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
 
-  --accent-teal: #10b981;
+  --accent-teal: #10B981;
   --accent-emerald: #059669;
-  --accent-gold: #f59e0b;
-  --accent-rose: #f43f5e;
-  --accent-violet: #8b5cf6;
-  --accent-blue: #3b82f6;
+  --accent-gold: #F59E0B;
+  --accent-rose: #EF4444;
+  --accent-violet: #8B5CF6;
+  --accent-blue: #3B82F6;
 
-  --gradient-main: linear-gradient(135deg, #10b981 0%, #059669 40%, #0d9488 100%);
-  --gradient-gold: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  --gradient-danger: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-  --gradient-hero: linear-gradient(135deg, #064e3b 0%, #0f172a 50%, #1e1b4b 100%);
-
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.35);
-  --shadow-glow: 0 0 40px rgba(16, 185, 129, 0.12);
+  --shadow-card: 0 4px 24px -4px rgba(0, 0, 0, 0.5);
 
   --radius: 0.625rem;
   --radius-lg: 1.25rem;
@@ -125,10 +118,6 @@ body {
   color: var(--text-primary);
   font-family: var(--font-sans, 'Inter', 'Space Grotesk', system-ui, sans-serif);
   min-height: 100vh;
-  background-image:
-    radial-gradient(ellipse 600px 400px at 10% 15%, rgba(16, 185, 129, 0.08), transparent),
-    radial-gradient(ellipse 500px 350px at 85% 10%, rgba(139, 92, 246, 0.06), transparent),
-    radial-gradient(ellipse 400px 300px at 50% 85%, rgba(245, 158, 11, 0.05), transparent);
 }
 
 /* ── Dashboard Shell ─────────────────────────── */
