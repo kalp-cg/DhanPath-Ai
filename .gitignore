@@ -1,0 +1,41 @@
+# Flutter/Dart generated files
+.dart_tool/
+.packages
+.pub/
+/build/
+
+# Flutter platform build artifacts
+**/build/
+android/.gradle/
+android/local.properties
+android/key.properties
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+macos/Flutter/ephemeral/
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Environment and local secrets
+.env
+.env.*
+
+# Local data files
+*.db
+
+# Flutter plugin dependency lock file (generated)
+.flutter-plugins-dependencies
