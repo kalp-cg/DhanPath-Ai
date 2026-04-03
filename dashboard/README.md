@@ -27,11 +27,13 @@ Set these in `.env.local`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_FAMILY_ID=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+GEMINI_API_KEY=
 ```
 
-If Supabase is not configured, summary API falls back to mock data for rehearsal.
+No static/mock fallback is used by API routes. Supabase config is required.
 
 ## Routes
 
@@ -39,6 +41,9 @@ If Supabase is not configured, summary API falls back to mock data for rehearsal
 - `/family` family dashboard (member bars + runway section)
 - `/api/family/summary` family summary JSON
 - `/api/family/workspace` create workspace (POST)
+- `/api/family/invite` invite member by email (POST)
+- `/api/family/invitations/pending` fetch pending invites for logged-in email (GET)
+- `/api/family/invitations/accept` accept invite token (POST)
 - `/api/transactions` create transaction (POST)
 - `/api/forecast` budget forecast JSON
 

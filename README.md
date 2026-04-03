@@ -92,7 +92,9 @@ lib/
 
 ```bash
 flutter pub get
-flutter run
+flutter run \
+  --dart-define=SUPABASE_URL=your_supabase_url \
+  --dart-define=SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### Run tests
