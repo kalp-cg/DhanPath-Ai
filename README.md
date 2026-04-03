@@ -1,10 +1,5 @@
 # DhanPath
-
-<<<<<<< HEAD
 Offline-first daily budget and expense tracker built with Flutter for Indian SMS transaction workflows.
-=======
-Offline-first daily budget and expense tracker built with Flutter for Indian SMS transaction workflows.
->>>>>>> 89a1920a142c9e4acc416c7006c46156166e8823
 
 DhanPath answers one practical question every day:
 "How much can I spend today?"
@@ -123,6 +118,17 @@ Avoid claiming as shipped in current build:
 - cloud family sync backend,
 - parent-child shared finance workspace,
 - server-powered conversational AI assistant.
+
+## Hackathon Build Track
+
+The active hackathon execution roadmap is maintained in:
+- `docs/HACKATHON_DELIVERY_PLAN.md`
+
+This plan tracks the transition from offline personal finance app to:
+- Family workspace mode,
+- Forecast and runway insights,
+- AI assistant integration,
+- Demo-ready dashboard narrative.
 
 ## Demo Flow (90 seconds)
 

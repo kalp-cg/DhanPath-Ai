@@ -13,6 +13,7 @@ import 'providers/theme_provider.dart';
 import 'providers/student_budget_provider.dart';
 import 'providers/savings_goals_provider.dart';
 import 'providers/recurring_bills_provider.dart';
+import 'providers/family_workspace_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/transactions_screen.dart';
 import 'screens/insights_screen.dart';
@@ -99,6 +100,7 @@ void main() async {
             ChangeNotifierProvider(create: (_) => StudentBudgetProvider()),
             ChangeNotifierProvider(create: (_) => SavingsGoalsProvider()),
             ChangeNotifierProvider(create: (_) => RecurringBillsProvider()),
+            ChangeNotifierProvider(create: (_) => FamilyWorkspaceProvider()),
           ],
           child: const DhanPathApp(),
         ),
