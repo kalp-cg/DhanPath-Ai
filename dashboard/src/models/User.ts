@@ -17,7 +17,7 @@ const userSchema = new Schema<UserDoc>(
     name: { type: String, required: true, trim: true },
     familyId: { type: Schema.Types.ObjectId, ref: "Family" },
   },
-  { timestamps: true },
+  { timestamps: true, collection: "user_tra" },
 );
 
 export const User = models.User || model<UserDoc>("User", userSchema);
