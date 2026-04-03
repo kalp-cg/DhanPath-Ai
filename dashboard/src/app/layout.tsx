@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
-const spaceGrotesk = Space_Grotesk({
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
+const inter = Inter({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
@@ -13,8 +16,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DhanPath Dashboard",
-  description: "Family finance intelligence dashboard powered by Next.js and Supabase.",
+  title: "DhanPath AI — Family Finance Dashboard",
+  description:
+    "India's first SMS-native, AI-powered family budget OS. Real-time family spend visibility, budget runway forecasting, and AI finance assistant.",
 };
 
 export default function RootLayout({
@@ -25,7 +29,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={cn("h-full", "antialiased", inter.variable, jetbrainsMono.variable, "font-sans", geist.variable)}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
