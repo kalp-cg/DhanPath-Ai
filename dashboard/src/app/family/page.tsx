@@ -9,9 +9,14 @@ type Summary = {
   familyId: string;
   familyName: string;
   inviteCode: string;
+  selectedYear: number;
+  selectedMonth: number;
+  availableYears: number[];
   totalMonthlySpend: number;
   memberBreakdown: Array<{ userId: string; name: string; role: string; monthlySpend: number }>;
   topCategories: Array<{ category: string; amount: number }>;
+  monthlyTimeline: Array<{ month: number; label: string; amount: number }>;
+  yearlyTotals: Array<{ year: number; amount: number }>;
   recentTransactions: Array<{
     id: string;
     userName: string;
@@ -24,6 +29,7 @@ type Summary = {
 };
 
 export default function FamilyPage() {
+  const now = new Date();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -31,6 +37,8 @@ export default function FamilyPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [amount, setAmount] = useState("0");
   const [category, setCategory] = useState("General");
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,17 +53,21 @@ export default function FamilyPage() {
     }
     setUser(data.user);
     return data.user as User;
-  }, [router]);
+  }, [router, setUser]);
 
   const fetchSummary = useCallback(async () => {
-    const res = await fetch("/api/family/summary", { cache: "no-store" });
+    const params = new URLSearchParams({
+      year: String(selectedYear),
+      month: String(selectedMonth),
+    });
+    const res = await fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" });
     if (!res.ok) {
       setSummary(null);
       return;
     }
     const data = await res.json();
     setSummary(data);
-  }, []);
+  }, [selectedYear, selectedMonth, setSummary]);
 
   useEffect(() => {
     let mounted = true;
@@ -195,8 +207,43 @@ export default function FamilyPage() {
               Invite Code: <strong>{summary?.inviteCode ?? "-"}</strong>
             </p>
             <p>
-              Monthly Spend: <strong>Rs {summary?.totalMonthlySpend?.toFixed(2) ?? "0.00"}</strong>
+              Spend ({new Date(selectedYear, selectedMonth - 1, 1).toLocaleString("en-US", { month: "long" })} {selectedYear}):{" "}
+              <strong>Rs {summary?.totalMonthlySpend?.toFixed(2) ?? "0.00"}</strong>
             </p>
+          </section>
+
+          <section className="panel filter-panel">
+            <div className="filter-row">
+              <label>
+                Year
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                >
+                  {(summary?.availableYears ?? [selectedYear]).map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Month
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                >
+                  {Array.from({ length: 12 }, (_, idx) => {
+                    const m = idx + 1;
+                    return (
+                      <option key={m} value={m}>
+                        {new Date(2026, idx, 1).toLocaleString("en-US", { month: "long" })}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+            </div>
           </section>
 
           <section className="panel stack">
@@ -242,8 +289,36 @@ export default function FamilyPage() {
             </div>
           </section>
 
+          <section className="panel grid-two">
+            <div>
+              <h3>Month-wise Spend ({selectedYear})</h3>
+              <ul className="list">
+                {summary?.monthlyTimeline?.map((m) => (
+                  <li key={m.month}>
+                    <span>{m.label}</span>
+                    <strong>Rs {m.amount.toFixed(2)}</strong>
+                  </li>
+                )) ?? <li>No monthly data yet.</li>}
+              </ul>
+            </div>
+
+            <div>
+              <h3>Year-wise Spend</h3>
+              <ul className="list">
+                {summary?.yearlyTotals?.map((y) => (
+                  <li key={y.year}>
+                    <span>{y.year}</span>
+                    <strong>Rs {y.amount.toFixed(2)}</strong>
+                  </li>
+                )) ?? <li>No yearly data yet.</li>}
+              </ul>
+            </div>
+          </section>
+
           <section className="panel">
-            <h3>Recent Transactions</h3>
+            <h3>
+              Transactions for {new Date(selectedYear, selectedMonth - 1, 1).toLocaleString("en-US", { month: "long" })} {selectedYear}
+            </h3>
             <ul className="list">
               {summary?.recentTransactions?.map((t) => (
                 <li key={t.id}>
