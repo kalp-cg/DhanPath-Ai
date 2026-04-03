@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseStorageClient, hasSupabaseStorageEnv } from "@/lib/supabase-server";
+import { requireAuthenticatedUser, requireFamilyMembership } from "@/server/auth";
 
 type CreateTransactionBody = {
-  userId: string;
   familyId: string;
   amount: number;
   type?: "debit" | "credit";
@@ -27,19 +27,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  if (!body.userId || !body.familyId || !Number.isFinite(body.amount)) {
+  if (!body.familyId || !Number.isFinite(body.amount)) {
     return NextResponse.json(
-      { error: "userId, familyId, amount are required" },
+      { error: "familyId and amount are required" },
       { status: 400 },
     );
   }
+
+  const auth = await requireAuthenticatedUser(request);
+  if ("response" in auth) return auth.response;
+
+  const membership = await requireFamilyMembership({
+    familyId: body.familyId,
+    userId: auth.user.id,
+  });
+  if (!membership.ok) return membership.response;
 
   const supabase = createSupabaseStorageClient();
 
   const { data, error } = await supabase
     .from("transactions")
     .insert({
-      user_id: body.userId,
+      user_id: auth.user.id,
       family_id: body.familyId,
       amount: body.amount,
       type: body.type ?? "debit",
