@@ -125,7 +125,7 @@ The active hackathon execution roadmap is maintained in:
 - `docs/HACKATHON_DELIVERY_PLAN.md`
 
 Web dashboard module:
-- `dashboard/` (Next.js + API routes + Supabase-ready integration)
+- `dashboard/` (Next.js backend APIs + Supabase storage integration)
 
 This plan tracks the transition from offline personal finance app to:
 - Family workspace mode,

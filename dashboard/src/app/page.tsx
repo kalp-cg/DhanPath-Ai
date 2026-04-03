@@ -16,23 +16,22 @@ export default function Home() {
         <article className="card">
           <h2>What Is Ready</h2>
           <p>- Family summary endpoint (`/api/family/summary`)</p>
+          <p>- Family workspace creation endpoint (`/api/family/workspace`)</p>
+          <p>- Transaction write endpoint (`/api/transactions`)</p>
           <p>- Forecast endpoint (`/api/forecast`)</p>
           <p>- Demo dashboard page with spend bars and runway signal</p>
-          <p>- Supabase fallback-safe response mode for hackathon demos</p>
+          <p>- Node backend + Supabase storage architecture</p>
         </article>
 
         <article className="card">
           <h2>Next Immediate Step</h2>
           <p>
-            Connect real Supabase project credentials in `.env.local`, then wire
-            authenticated admin/member views.
+            Connect Supabase storage credentials in `.env.local`, then build
+            family invite and AI assistant flows on top of the backend APIs.
           </p>
           <div className="chips" style={{ marginTop: "0.9rem" }}>
             <Link className="cta primary" href="/family">
               Open Family Dashboard
-            </Link>
-            <Link className="cta secondary" href="/auth">
-              Sign In
             </Link>
             <Link className="cta secondary" href="/api/family/summary">
               Test Summary API

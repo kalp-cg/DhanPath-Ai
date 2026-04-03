@@ -5,8 +5,9 @@ This folder contains the web admin dashboard for Family Mode.
 ## Why Next.js Here
 
 - App Router pages for a real web app structure
-- API routes for server-side logic (`/api/family/summary`, `/api/forecast`)
-- Smooth Supabase integration for family-level data
+- API routes for server-side logic and business rules
+- Node backend service layer owns all read/write operations
+- Supabase is used as storage only (database persistence)
 - Easy deployment on Vercel
 
 ## Quick Start
@@ -26,26 +27,26 @@ Set these in `.env.local`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_FAMILY_ID=
 ```
 
-If Supabase is not configured, APIs return mock demo data so the dashboard still works for rehearsals.
+If Supabase is not configured, summary API falls back to mock data for rehearsal.
 
 ## Routes
 
 - `/` landing page with build status and links
-- `/auth` Supabase magic-link sign-in page
 - `/family` family dashboard (member bars + runway section)
 - `/api/family/summary` family summary JSON
+- `/api/family/workspace` create workspace (POST)
+- `/api/transactions` create transaction (POST)
 - `/api/forecast` budget forecast JSON
 
-## Auth + RLS Behavior
+## Architecture Note
 
-- When Supabase env is configured, `/api/family/summary` requires `Authorization: Bearer <access_token>`.
-- The `/family` page reads current session token from Supabase Auth and sends it to the API.
-- If no session is available, user is prompted to sign in via `/auth`.
+- Frontend never talks directly to Supabase.
+- Next.js API routes act as backend endpoints.
+- Backend service layer in `src/server/` handles Supabase queries and aggregation logic.
 
 ## Verify Build
 

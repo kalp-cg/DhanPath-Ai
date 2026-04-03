@@ -4,27 +4,22 @@ function getEnv(name: string): string {
   return process.env[name] ?? "";
 }
 
-export function hasSupabaseEnv(): boolean {
+export function hasSupabaseStorageEnv(): boolean {
   return Boolean(
     getEnv("NEXT_PUBLIC_SUPABASE_URL") &&
-      getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+      getEnv("SUPABASE_SERVICE_ROLE_KEY"),
   );
 }
 
-export function createSupabaseRlsClient(accessToken: string) {
+export function createSupabaseStorageClient() {
   const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const supabaseAnonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const supabaseServiceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
     throw new Error("Supabase environment is not configured");
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: { persistSession: false },
-    global: {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
   });
 }
