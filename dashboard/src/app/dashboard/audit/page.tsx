@@ -17,6 +17,8 @@ export default function AuditPage() {
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [currentUserId, setCurrentUserId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, totalRecords: 0, hasPrev: false, hasNext: false });
   const [action, setAction] = useState("all");
   const [actorId, setActorId] = useState("all");
@@ -25,19 +27,29 @@ export default function AuditPage() {
   const [page, setPage] = useState(1);
 
   const fetchAudit = useCallback(async () => {
-    const now = new Date();
+    setLoading(true);
+    setError(null);
     const params = new URLSearchParams({
-      year: String(now.getFullYear()), month: String(now.getMonth() + 1), memberId: "all",
-      page: "1", pageSize: "1", auditAction: action, auditActorId: actorId,
-      auditFrom: from, auditTo: to, auditPage: String(page), auditPageSize: "15",
+      action,
+      actorId,
+      from,
+      to,
+      page: String(page),
+      pageSize: "15",
     });
-    const res = await fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" });
-    if (!res.ok) return;
+    const res = await fetch(`/api/family/audit?${params.toString()}`, { cache: "no-store" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(String(body.error ?? "Failed to load audit log"));
+      setLoading(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
-    setAudit(Array.isArray(data.recentAudit) ? data.recentAudit : []);
+    setAudit(Array.isArray(data.audit) ? data.audit : []);
     setMembers(Array.isArray(data.members) ? data.members : []);
     setCurrentUserId(String(data.currentUserId ?? ""));
-    if (data.auditPagination) setPagination(data.auditPagination);
+    if (data.pagination) setPagination(data.pagination);
+    setLoading(false);
   }, [action, actorId, from, to, page]);
 
   useEffect(() => { fetchAudit(); }, [fetchAudit]);
@@ -53,6 +65,12 @@ export default function AuditPage() {
 
   return (
     <div className="stack animate-slide">
+      {error && (
+        <div className="panel" style={{ borderColor: "var(--color-danger)", color: "var(--color-danger)", fontWeight: 600 }}>
+          {error}
+        </div>
+      )}
+
       {/* Filters */}
       <div className="panel">
         <div className="panel-header">
@@ -94,7 +112,7 @@ export default function AuditPage() {
           <h3 className="panel-title">Activity Log</h3>
           <span className="panel-subtitle">{pagination.totalRecords} records</span>
         </div>
-        {audit.length === 0 ? <EmptyState icon="📋" title="No audit events" subtitle="Actions will appear here as they happen" /> : (
+        {loading ? <EmptyState icon="📋" title="Loading audit events..." subtitle="Please wait" /> : audit.length === 0 ? <EmptyState icon="📋" title="No audit events" subtitle="Actions will appear here as they happen" /> : (
           <>
             <ul className="data-list">
               {audit.map((entry) => (
