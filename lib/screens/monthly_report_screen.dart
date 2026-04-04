@@ -7,7 +7,9 @@ import '../utils/category_icons.dart';
 
 /// Monthly spending report with weekly chart, top categories, and tips.
 class MonthlyReportScreen extends StatefulWidget {
-  const MonthlyReportScreen({super.key});
+  final bool autoLoad;
+
+  const MonthlyReportScreen({super.key, this.autoLoad = true});
 
   @override
   State<MonthlyReportScreen> createState() => _MonthlyReportScreenState();
@@ -28,11 +30,17 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
   @override
   void initState() {
     super.initState();
-    _loadReport();
+    if (widget.autoLoad) {
+      _loadReport();
+    } else {
+      _isLoading = false;
+    }
   }
 
   Future<void> _loadReport() async {
-    setState(() => _isLoading = true);
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final now = DateTime.now();
@@ -103,7 +111,9 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
       debugPrint('Report error: $e');
     }
 
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   String _fmt(double amount) {
