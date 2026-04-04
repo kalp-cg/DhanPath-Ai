@@ -234,6 +234,20 @@ select {
   flex-wrap: wrap;
 }
 
+.ca-pack-links {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .inline-form {
   display: grid;
   grid-template-columns: 1fr 1fr auto;

@@ -7,6 +7,8 @@ export type AuditAction =
   | "invoice_exported"
   | "audit_exported"
   | "transaction_report_exported"
+  | "ca_pack_generated"
+  | "ca_pack_schedule_updated"
   | "family_created"
   | "family_joined";
 
@@ -34,6 +36,8 @@ const auditLogSchema = new Schema<AuditLogDoc>(
         "invoice_exported",
         "audit_exported",
         "transaction_report_exported",
+        "ca_pack_generated",
+        "ca_pack_schedule_updated",
         "family_created",
         "family_joined",
       ],

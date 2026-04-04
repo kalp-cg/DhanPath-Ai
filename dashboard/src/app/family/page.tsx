@@ -18,6 +18,27 @@ type FullTransaction = {
   txnTime: string;
 };
 
+type CaSchedule = {
+  caEmail: string;
+  dayOfMonth: number;
+  includeAudit: boolean;
+  active: boolean;
+  lastRunMonth: string | null;
+  lastGeneratedAt: string | null;
+};
+
+type GeneratedCaPack = {
+  token: string;
+  year: number;
+  month: number;
+  includeAudit: boolean;
+  expiresAt: string;
+  packPageUrl: string;
+  csvUrl: string;
+  pdfUrl: string;
+  mailTo: string;
+};
+
 type Summary = {
   currentUserId: string;
   isCurrentUserAdmin: boolean;
@@ -35,6 +56,8 @@ type Summary = {
       | "invoice_exported"
       | "audit_exported"
       | "transaction_report_exported"
+      | "ca_pack_generated"
+      | "ca_pack_schedule_updated"
       | "family_created"
       | "family_joined";
     actorUserId: string;
@@ -155,6 +178,15 @@ export default function FamilyPage() {
     hasPrev: false,
     hasNext: false,
   });
+  const [caSchedule, setCaSchedule] = useState<CaSchedule>({
+    caEmail: "",
+    dayOfMonth: 5,
+    includeAudit: true,
+    active: true,
+    lastRunMonth: null,
+    lastGeneratedAt: null,
+  });
+  const [generatedCaPack, setGeneratedCaPack] = useState<GeneratedCaPack | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -464,13 +496,28 @@ export default function FamilyPage() {
     });
   }, [fullTxCategory, fullTxFrom, fullTxMemberId, fullTxPage, fullTxTo, fullTxType]);
 
+  const fetchCaSchedule = useCallback(async () => {
+    const res = await fetch("/api/family/ca-pack/settings", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    if (!data.schedule) return;
+    setCaSchedule({
+      caEmail: String(data.schedule.caEmail ?? ""),
+      dayOfMonth: Number(data.schedule.dayOfMonth ?? 5),
+      includeAudit: Boolean(data.schedule.includeAudit ?? true),
+      active: Boolean(data.schedule.active ?? true),
+      lastRunMonth: data.schedule.lastRunMonth ? String(data.schedule.lastRunMonth) : null,
+      lastGeneratedAt: data.schedule.lastGeneratedAt ? String(data.schedule.lastGeneratedAt) : null,
+    });
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
     async function boot() {
       const me = await fetchMe();
       if (mounted && me?.familyId) {
-        await Promise.all([fetchSummary(), fetchAllTransactions()]);
+        await Promise.all([fetchSummary(), fetchAllTransactions(), fetchCaSchedule()]);
       }
     }
 
@@ -478,12 +525,13 @@ export default function FamilyPage() {
     const interval = setInterval(() => {
       void fetchSummary();
       void fetchAllTransactions();
+      void fetchCaSchedule();
     }, 5000);
     return () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [fetchAllTransactions, fetchMe, fetchSummary]);
+  }, [fetchAllTransactions, fetchCaSchedule, fetchMe, fetchSummary]);
 
   async function createFamily(e: FormEvent) {
     e.preventDefault();
@@ -701,6 +749,43 @@ export default function FamilyPage() {
     setError(null);
   }
 
+  async function saveCaSchedule() {
+    const res = await fetch("/api/family/ca-pack/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(caSchedule),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? "could not save CA schedule");
+      return;
+    }
+    setError(null);
+    await fetchCaSchedule();
+  }
+
+  async function generateCaPack() {
+    const now = new Date();
+    const res = await fetch("/api/family/ca-pack/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        includeAudit: caSchedule.includeAudit,
+        expiresDays: 10,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? "could not generate CA pack");
+      return;
+    }
+    setGeneratedCaPack(data.pack as GeneratedCaPack);
+    setError(null);
+    await fetchSummary();
+  }
+
   function clearAuditFilters() {
     setAuditAction("all");
     setAuditActorId("all");
@@ -768,6 +853,8 @@ export default function FamilyPage() {
     invoice_exported: "Invoice Exported",
     audit_exported: "Audit Exported",
     transaction_report_exported: "Transaction Report Exported",
+    ca_pack_generated: "CA Pack Generated",
+    ca_pack_schedule_updated: "CA Pack Schedule Updated",
     family_created: "Family Created",
     family_joined: "Family Joined",
   };
@@ -1394,6 +1481,81 @@ export default function FamilyPage() {
                 Next
               </button>
             </div>
+          </section>
+
+          <section className="panel">
+            <h3>Scheduled CA Pack</h3>
+            <div className="filter-row audit-filter-row">
+              <label>
+                CA Email
+                <input
+                  type="email"
+                  value={caSchedule.caEmail}
+                  onChange={(e) => setCaSchedule((prev) => ({ ...prev, caEmail: e.target.value }))}
+                  placeholder="ca@example.com"
+                />
+              </label>
+              <label>
+                Day Of Month
+                <input
+                  type="number"
+                  min={1}
+                  max={28}
+                  value={caSchedule.dayOfMonth}
+                  onChange={(e) =>
+                    setCaSchedule((prev) => ({
+                      ...prev,
+                      dayOfMonth: Math.max(1, Math.min(28, Number(e.target.value) || 1)),
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Include Audit Activity
+                <select
+                  value={caSchedule.includeAudit ? "yes" : "no"}
+                  onChange={(e) => setCaSchedule((prev) => ({ ...prev, includeAudit: e.target.value === "yes" }))}
+                >
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </label>
+              <label>
+                Schedule Status
+                <select
+                  value={caSchedule.active ? "active" : "paused"}
+                  onChange={(e) => setCaSchedule((prev) => ({ ...prev, active: e.target.value === "active" }))}
+                >
+                  <option value="active">Active</option>
+                  <option value="paused">Paused</option>
+                </select>
+              </label>
+            </div>
+            <div className="audit-actions">
+              <button type="button" className="ghost" onClick={saveCaSchedule}>Save CA Schedule</button>
+              <button type="button" className="ghost" onClick={generateCaPack}>Generate This Month Pack</button>
+            </div>
+            <p>
+              Last Run Month: <strong>{caSchedule.lastRunMonth ?? "-"}</strong> · Last Generated:{" "}
+              <strong>{caSchedule.lastGeneratedAt ? new Date(caSchedule.lastGeneratedAt).toLocaleString() : "-"}</strong>
+            </p>
+
+            {generatedCaPack ? (
+              <div className="ca-pack-links">
+                <p>
+                  Generated Pack: <strong>{generatedCaPack.year}-{String(generatedCaPack.month).padStart(2, "0")}</strong> · Expires:{" "}
+                  <strong>{new Date(generatedCaPack.expiresAt).toLocaleString()}</strong>
+                </p>
+                <div className="audit-actions">
+                  <a className="ghost link-btn" href={generatedCaPack.packPageUrl} target="_blank" rel="noreferrer">Open Share Page</a>
+                  <a className="ghost link-btn" href={generatedCaPack.csvUrl} target="_blank" rel="noreferrer">Download CSV</a>
+                  <a className="ghost link-btn" href={generatedCaPack.pdfUrl} target="_blank" rel="noreferrer">Open PDF View</a>
+                  {generatedCaPack.mailTo ? (
+                    <a className="ghost link-btn" href={generatedCaPack.mailTo}>Email To CA</a>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </section>
         </>
       )}
