@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import LogoMark from "@/components/LogoMark";
 
 type AuthMode = "login" | "signup";
 
@@ -44,7 +45,10 @@ export default function AuthPage() {
   return (
     <main className="auth-shell">
       <section className="auth-panel">
-        <h1>DhanPath AI</h1>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+          <LogoMark size={26} />
+          <h1 style={{ margin: 0 }}>DhanPath</h1>
+        </div>
         <p>The smart family finance workspace. Track, analyze, and optimize together.</p>
 
         <div className="auth-tabs">
