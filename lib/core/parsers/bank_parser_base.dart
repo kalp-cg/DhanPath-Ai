@@ -326,6 +326,8 @@ abstract class BankParser {
     // Match Kotlin's CompiledPatterns.Merchant.ALL_PATTERNS order
     // But handle UPI VPAs with dots better
     final patterns = [
+      // UPI path format: UPI/DR/<ref>/<merchant>
+      RegExp(r'UPI/(?:DR|CR)/[A-Za-z0-9]+/([^/\.\n]+)', caseSensitive: false),
       // VPA pattern: "credited to VPA GSRTC111@icici" - highest priority
       RegExp(r'VPA\s+([^@\s]+)@', caseSensitive: false),
       // TO_PATTERN: to [MERCHANT] followed by (UPI, on, was, or end/dot)
@@ -424,7 +426,12 @@ abstract class BankParser {
 
   /// Validates if extracted merchant name is useful
   bool isValidMerchant(String name) {
-    if (name.length < 3) return false;
+    if (name.length < 3) {
+      // Allow short brand-like tokens such as "O2".
+      if (!RegExp(r'^[a-zA-Z]\d[a-zA-Z0-9]*$').hasMatch(name.trim())) {
+        return false;
+      }
+    }
     if (RegExp(r'^\d+$').hasMatch(name)) return false;
     if (name.contains('@')) return false;
     if (!RegExp(r'[a-zA-Z]').hasMatch(name)) return false;
@@ -530,6 +537,11 @@ abstract class BankParser {
   /// Extract account last 4 digits
   String? extractAccountLast4(String message) {
     final patterns = [
+      // Plain account ending format: "A/c ending 1234"
+      RegExp(
+        r'a/c\s*(?:no\.?\s*)?(?:ending|end|ending in)\s*(\d{4})',
+        caseSensitive: false,
+      ),
       // Standard masked: a/c XX1234 or a/c XXXX1234 or a/c no. XXXXXXXXXXX0693
       RegExp(r'a/c\s*(?:no\.?\s*)?(?:x+|\*+)(\d{3,4})', caseSensitive: false),
       // Ellipsis format: A/c ...3 or A/c ....0693

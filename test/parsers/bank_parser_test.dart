@@ -32,6 +32,29 @@ void main() {
 
       expect(parser, isNull);
     });
+
+    test('should parse BMCB UPI debit format', () {
+      const smsBody =
+          'Rs.80.00 Debited to A/c No.XXX28345 On 04-04-2026 & '
+          'UPI/DR/187292115612/PATEL KALP. Bal Rs.2883.39 '
+          'To dispute SMS BLOCKALL 28345 to 9574200300 -BMCB Bank';
+      const sender = 'BMCB';
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      final parsed = BankParserFactory.parseTransaction(
+        smsBody,
+        sender,
+        timestamp,
+      );
+
+      expect(parsed, isNotNull);
+      expect(parsed!.amount, 80.00);
+      expect(parsed.type, TransactionType.expense);
+      expect(parsed.bankName, 'BMCB Bank');
+      expect(parsed.accountLast4, isNotNull);
+      expect(parsed.balance, 2883.39);
+      expect(parsed.merchant, isNotNull);
+    });
   });
 
   group('HDFC Bank Parser Tests', () {

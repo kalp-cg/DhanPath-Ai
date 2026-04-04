@@ -678,6 +678,7 @@ class CompiledPatterns {
     'RNSB': 'Rajkot Nagarik Sahakari Bank',
     'PUNE': 'Pune People\'s Co-op Bank', 'PMC': 'Pune People\'s Co-op Bank',
     'CITIZEN': 'Citizen Credit Co-op Bank', 'CCBL': 'Citizen Credit Co-op Bank',
+    'BMCB': 'BMCB Bank', 'BMCBBK': 'BMCB Bank',
 
     // Regional Rural Banks (Sample)
     'APGVB': 'Andhra Pradesh Grameena Vikas Bank',
