@@ -90,13 +90,18 @@ export default function FamilyPage() {
       };
     }
 
-    const maxMemberSpend = Math.max(1, ...summary.memberBreakdown.map((m) => m.monthlySpend));
-    const maxCategorySpend = Math.max(1, ...summary.topCategories.map((c) => c.amount));
-    const maxMonthSpend = Math.max(1, ...summary.monthlyTimeline.map((m) => m.amount));
-    const maxYearSpend = Math.max(1, ...summary.yearlyTotals.map((y) => y.amount));
+    const memberBreakdown = Array.isArray(summary.memberBreakdown) ? summary.memberBreakdown : [];
+    const topCategories = Array.isArray(summary.topCategories) ? summary.topCategories : [];
+    const monthlyTimeline = Array.isArray(summary.monthlyTimeline) ? summary.monthlyTimeline : [];
+    const yearlyTotals = Array.isArray(summary.yearlyTotals) ? summary.yearlyTotals : [];
 
-    const totalYearSpend = summary.monthlyTimeline.reduce((sum, m) => sum + m.amount, 0);
-    const activeMonths = summary.monthlyTimeline.filter((m) => m.amount > 0).length || 1;
+    const maxMemberSpend = Math.max(1, ...memberBreakdown.map((m) => m.monthlySpend));
+    const maxCategorySpend = Math.max(1, ...topCategories.map((c) => c.amount));
+    const maxMonthSpend = Math.max(1, ...monthlyTimeline.map((m) => m.amount));
+    const maxYearSpend = Math.max(1, ...yearlyTotals.map((y) => y.amount));
+
+    const totalYearSpend = monthlyTimeline.reduce((sum, m) => sum + m.amount, 0);
+    const activeMonths = monthlyTimeline.filter((m) => m.amount > 0).length || 1;
     const avgMonthlySpend = totalYearSpend / activeMonths;
 
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
@@ -104,8 +109,8 @@ export default function FamilyPage() {
     const projectedMonthEnd = (summary.totalMonthlySpend / observedDays) * daysInMonth;
 
     const topSpender =
-      summary.memberBreakdown.length > 0
-        ? [...summary.memberBreakdown].sort((a, b) => b.monthlySpend - a.monthlySpend)[0]
+      memberBreakdown.length > 0
+        ? [...memberBreakdown].sort((a, b) => b.monthlySpend - a.monthlySpend)[0]
         : null;
 
     return {
@@ -145,7 +150,41 @@ export default function FamilyPage() {
       return;
     }
     const data = await res.json();
-    setSummary(data);
+    const normalized: Summary = {
+      familyId: data.familyId ?? "",
+      familyName: data.familyName ?? "Family",
+      inviteCode: data.inviteCode ?? "-",
+      selectedYear: Number(data.selectedYear ?? selectedYear),
+      selectedMonth: Number(data.selectedMonth ?? selectedMonth),
+      availableYears: Array.isArray(data.availableYears) ? data.availableYears : [selectedYear],
+      totalMonthlySpend: Number(data.totalMonthlySpend ?? 0),
+      memberBreakdown: Array.isArray(data.memberBreakdown) ? data.memberBreakdown : [],
+      topCategories: Array.isArray(data.topCategories) ? data.topCategories : [],
+      monthlyTimeline: Array.isArray(data.monthlyTimeline) ? data.monthlyTimeline : [],
+      yearlyTotals: Array.isArray(data.yearlyTotals) ? data.yearlyTotals : [],
+      memberTransactionStats: Array.isArray(data.memberTransactionStats) ? data.memberTransactionStats : [],
+      selectedMemberId: typeof data.selectedMemberId === "string" ? data.selectedMemberId : "all",
+      pagination:
+        data.pagination && typeof data.pagination === "object"
+          ? {
+              page: Number(data.pagination.page ?? 1),
+              pageSize: Number(data.pagination.pageSize ?? 10),
+              totalTransactions: Number(data.pagination.totalTransactions ?? 0),
+              totalPages: Number(data.pagination.totalPages ?? 1),
+              hasPrev: Boolean(data.pagination.hasPrev),
+              hasNext: Boolean(data.pagination.hasNext),
+            }
+          : {
+              page: 1,
+              pageSize: 10,
+              totalTransactions: 0,
+              totalPages: 1,
+              hasPrev: false,
+              hasNext: false,
+            },
+      recentTransactions: Array.isArray(data.recentTransactions) ? data.recentTransactions : [],
+    };
+    setSummary(normalized);
   }, [page, selectedMemberId, selectedYear, selectedMonth, setSummary]);
 
   useEffect(() => {
