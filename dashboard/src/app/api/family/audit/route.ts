@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { AuditLog } from "@/models/AuditLog";
-import { Family } from "@/models/Family";
 import { User } from "@/models/User";
+import { resolveFamilyAccess } from "@/server/family-access";
 
 type AuditQuery = {
   familyId: unknown;
@@ -33,21 +33,15 @@ export async function GET(request: NextRequest) {
 
   await connectToMongo();
 
-  const user = await User.findById(auth.userId);
-  if (!user?.familyId) {
-    return NextResponse.json({ error: "no family found for user" }, { status: 404 });
+  const access = await resolveFamilyAccess(auth.userId);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
   }
-
-  const family = await Family.findById(user.familyId).lean();
-  if (!family) {
-    return NextResponse.json({ error: "family not found" }, { status: 404 });
-  }
-
-  const members = family.members as Array<{ userId: unknown; role: string }>;
-  const requesterMember = members.find((member) => String(member.userId) === String(user._id));
-  if (!requesterMember || requesterMember.role !== "admin") {
+  if (!access.isAdmin) {
     return NextResponse.json({ error: "admin access required" }, { status: 403 });
   }
+
+  const { user, family, members } = access;
 
   const action = request.nextUrl.searchParams.get("action")?.trim() ?? "all";
   const actorId = request.nextUrl.searchParams.get("actorId")?.trim() ?? "all";
@@ -120,7 +114,7 @@ export async function GET(request: NextRequest) {
 
   const membersResponse = members.map((member) => ({
     userId: String(member.userId),
-    name: nameMap.get(String(member.userId)) ?? "Member",
+    name: nameMap.get(String(member.userId)) ?? member.name,
   }));
 
   return NextResponse.json(

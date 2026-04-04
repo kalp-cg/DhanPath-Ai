@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Types } from "mongoose";
 
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { AuditLog } from "@/models/AuditLog";
-import { Family } from "@/models/Family";
 import { User } from "@/models/User";
 import { writeAuditLog } from "@/server/audit-log";
+import { resolveFamilyAccess } from "@/server/family-access";
 
 function csvCell(value: string | number | null | undefined) {
   const text = String(value ?? "");
@@ -26,21 +27,15 @@ export async function GET(request: NextRequest) {
 
   await connectToMongo();
 
-  const user = await User.findById(auth.userId);
-  if (!user?.familyId) {
-    return NextResponse.json({ error: "no family found for user" }, { status: 404 });
+  const access = await resolveFamilyAccess(auth.userId);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
   }
-
-  const family = await Family.findById(user.familyId).lean();
-  if (!family) {
-    return NextResponse.json({ error: "family not found" }, { status: 404 });
-  }
-
-  const members = family.members as Array<{ userId: unknown; role: string }>;
-  const requesterMember = members.find((member) => String(member.userId) === String(user._id));
-  if (!requesterMember || requesterMember.role !== "admin") {
+  if (!access.isAdmin) {
     return NextResponse.json({ error: "admin access required" }, { status: 403 });
   }
+
+  const { user, family } = access;
 
   const auditAction = request.nextUrl.searchParams.get("auditAction")?.trim() ?? "all";
   const auditActorId = request.nextUrl.searchParams.get("auditActorId")?.trim() ?? "all";
@@ -115,8 +110,8 @@ export async function GET(request: NextRequest) {
   const filename = `dhanpath-audit-events-${filenameDate}.csv`;
 
   await writeAuditLog({
-    familyId: user.familyId,
-    actorUserId: user._id,
+    familyId: user.familyId as Types.ObjectId,
+    actorUserId: user._id as Types.ObjectId,
     action: "audit_exported",
     metadata: {
       exportedRows: rows.length,

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Types } from "mongoose";
 
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { CaPackSchedule } from "@/models/CaPackSchedule";
-import { Family } from "@/models/Family";
-import { User } from "@/models/User";
 import { writeAuditLog } from "@/server/audit-log";
+import { resolveFamilyAccess } from "@/server/family-access";
 
 async function getAdminContext(request: NextRequest) {
   const auth = getAuthUserFromRequest(request);
@@ -15,24 +15,15 @@ async function getAdminContext(request: NextRequest) {
 
   await connectToMongo();
 
-  const user = await User.findById(auth.userId);
-  if (!user?.familyId) {
-    return { error: NextResponse.json({ error: "no family found for user" }, { status: 404 }) };
+  const access = await resolveFamilyAccess(auth.userId);
+  if (!access.ok) {
+    return { error: NextResponse.json({ error: access.error }, { status: access.status }) };
   }
-
-  const family = await Family.findById(user.familyId).lean();
-  if (!family) {
-    return { error: NextResponse.json({ error: "family not found" }, { status: 404 }) };
-  }
-
-  const requester = (family.members as Array<{ userId: unknown; role: string }>).find(
-    (member) => String(member.userId) === String(user._id),
-  );
-  if (!requester || requester.role !== "admin") {
+  if (!access.isAdmin) {
     return { error: NextResponse.json({ error: "admin access required" }, { status: 403 }) };
   }
 
-  return { user, family };
+  return { user: access.user, family: access.family };
 }
 
 export async function GET(request: NextRequest) {
@@ -93,8 +84,8 @@ export async function POST(request: NextRequest) {
   );
 
   await writeAuditLog({
-    familyId: ctx.user.familyId,
-    actorUserId: ctx.user._id,
+    familyId: ctx.user.familyId as Types.ObjectId,
+    actorUserId: ctx.user._id as Types.ObjectId,
     action: "ca_pack_schedule_updated",
     metadata: { caEmail, dayOfMonth, includeAudit, active },
   });

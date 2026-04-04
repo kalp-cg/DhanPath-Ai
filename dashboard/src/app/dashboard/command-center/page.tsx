@@ -61,6 +61,7 @@ export default function CommandCenterPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<CommandCenterResponse | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   const money = useMemo(
     () =>
@@ -73,6 +74,7 @@ export default function CommandCenterPage() {
   );
 
   const fetchCommandCenter = useCallback(async () => {
+    if (forbidden) return;
     setLoading(true);
     setError(null);
 
@@ -82,6 +84,7 @@ export default function CommandCenterPage() {
 
       if (!res.ok) {
         if (res.status === 403) {
+          setForbidden(true);
           setError("Command Center is available only for family admins.");
         } else {
           setError(typeof payload?.error === "string" ? payload.error : "Failed to load command center.");
@@ -101,9 +104,10 @@ export default function CommandCenterPage() {
 
   useEffect(() => {
     fetchCommandCenter();
+    if (forbidden) return;
     const interval = setInterval(fetchCommandCenter, 30000);
     return () => clearInterval(interval);
-  }, [fetchCommandCenter]);
+  }, [fetchCommandCenter, forbidden]);
 
   if (loading) {
     return (

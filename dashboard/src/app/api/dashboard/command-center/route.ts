@@ -4,23 +4,10 @@ import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { Family } from "@/models/Family";
 import { Transaction } from "@/models/Transaction";
-import { User } from "@/models/User";
 import { Types } from "mongoose";
 
 import { getPlan, getOrCreateSubscription, getUsageSnapshot } from "@/server/billing-service";
-
-type FamilyMemberLean = {
-  userId: unknown;
-  email: string;
-  role: "admin" | "member";
-};
-
-type UserLean = {
-  _id: unknown;
-  email?: string;
-  name?: string;
-  familyId?: unknown;
-};
+import { resolveFamilyAccess } from "@/server/family-access";
 
 type TxLean = {
   _id: unknown;
@@ -53,68 +40,20 @@ export async function GET(request: NextRequest) {
 
   await connectToMongo();
 
-  const user = (await User.findById(auth.userId).lean()) as UserLean | null;
-  if (!user?.familyId) {
-    return NextResponse.json({ error: "no family found for user" }, { status: 404 });
+  const access = await resolveFamilyAccess(auth.userId);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const family = await Family.findById(user.familyId).lean();
-  if (!family) {
-    return NextResponse.json({ error: "family not found" }, { status: 404 });
-  }
-
-  const familyUsers = (await User.find({
-    $or: [{ familyId: family._id }, { familyId: String(family._id) }],
-  }).lean()) as UserLean[];
-
-  const rawMembers = ((family.members as FamilyMemberLean[]) ?? []).map((member) => ({
-    userId: String(member.userId),
-    email: member.email,
-    role: member.role,
-  }));
-
-  const memberMap = new Map<string, { userId: string; email: string; role: "admin" | "member" }>();
-  for (const member of rawMembers) {
-    if (!member.userId) continue;
-    memberMap.set(member.userId, {
-      userId: member.userId,
-      email: member.email.toLowerCase(),
-      role: member.role === "admin" ? "admin" : "member",
-    });
-  }
-
-  for (const familyUser of familyUsers) {
-    const uid = String(familyUser._id ?? "");
-    if (!uid) continue;
-    const existing = memberMap.get(uid);
-    memberMap.set(uid, {
-      userId: uid,
-      email: String(familyUser.email ?? existing?.email ?? "").toLowerCase(),
-      role: String(family.ownerUserId) === uid ? "admin" : (existing?.role ?? "member"),
-    });
-  }
-
-  const ownerUserId = String(family.ownerUserId);
-  if (memberMap.has(ownerUserId)) {
-    const owner = memberMap.get(ownerUserId);
-    if (owner) {
-      owner.role = "admin";
-      memberMap.set(ownerUserId, owner);
-    }
-  }
-
-  const members = Array.from(memberMap.values());
-  const isCurrentUserAdmin = members.some(
-    (member) => member.userId === String(user._id) && member.role === "admin",
-  );
-
-  if (!isCurrentUserAdmin) {
+  if (!access.isAdmin) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
+  const { user, family, members } = access;
+
   const names = new Map<string, string>();
-  for (const familyUser of familyUsers) {
-    names.set(String(familyUser._id), String(familyUser.name ?? "Member"));
+  for (const member of members) {
+    names.set(member.userId, member.name);
   }
 
   const now = new Date();
@@ -305,7 +244,10 @@ export async function GET(request: NextRequest) {
     ? debit30.filter((tx) => Number(tx.amount ?? 0) >= anomalyThreshold).length
     : 0;
 
-  const usage = await getUsageSnapshot({ familyId: family._id, monthlyTxnLimit: subscription.monthlyTxnLimit });
+  const usage = await getUsageSnapshot({
+    familyId: family._id as Types.ObjectId,
+    monthlyTxnLimit: subscription.monthlyTxnLimit,
+  });
   const usagePct = pct(usage.used, usage.monthlyTxnLimit);
   const plan = getPlan(subscription.planId);
 
