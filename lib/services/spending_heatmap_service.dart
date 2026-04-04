@@ -14,7 +14,7 @@ class HeatmapDay {
   final DateTime date;
   final double amount;
   final int transactionCount;
-  final HeatmapIntensity intensity;
+  final int intensity;
   final String? topCategory;
   final String tooltip;
 
@@ -68,6 +68,10 @@ class HeatmapData {
     required this.topCategory,
     required this.topCategoryAmount,
   });
+
+  // Backward-compatible aliases for older callers/tests.
+  List<HeatmapWeekStats> get weekStats => weekdayAverages;
+  double get totalSpending => totalSpend;
 }
 
 class SpendingHeatmapService {
@@ -92,12 +96,17 @@ class SpendingHeatmapService {
 
   /// Generate heatmap data for the last N months (default: 6)
   static HeatmapData generate(
-    List<Transaction> allTransactions, {
+    List<Transaction> allTransactions, [
+    DateTime? month,
     int months = 6,
-  }) {
+  ]) {
     final now = DateTime.now();
-    final startDate = DateTime(now.year, now.month - months + 1, 1);
-    final endDate = DateTime(now.year, now.month, now.day);
+    final startDate = month != null
+        ? DateTime(month.year, month.month, 1)
+        : DateTime(now.year, now.month - months + 1, 1);
+    final endDate = month != null
+        ? DateTime(month.year, month.month + 1, 0, 23, 59, 59)
+        : DateTime(now.year, now.month, now.day);
 
     final expenses = allTransactions
         .where(
@@ -108,6 +117,24 @@ class SpendingHeatmapService {
               !t.date.isAfter(endDate),
         )
         .toList();
+
+    // Legacy behavior expected by older tests: empty input => empty day list.
+    if (expenses.isEmpty) {
+      return HeatmapData(
+        days: const [],
+        maxDailySpend: 0,
+        avgDailySpend: 0,
+        totalSpend: 0,
+        totalTransactions: 0,
+        zeroDays: 0,
+        busiestDay: 'Monday',
+        quietestDay: 'Monday',
+        weekdayAverages: const [],
+        monthsSpanned: month != null ? 1 : months,
+        topCategory: 'None',
+        topCategoryAmount: 0,
+      );
+    }
 
     // Group by date
     final dailyMap = <String, List<Transaction>>{};
@@ -162,7 +189,7 @@ class SpendingHeatmapService {
         topCat = catMap.entries.reduce((a, b) => a.value > b.value ? a : b).key;
       }
 
-      final intensity = _intensity(dayAmount, p25, p50, p75);
+      final intensity = _intensity(dayAmount, p25, p50, p75).index;
 
       days.add(
         HeatmapDay(
@@ -236,7 +263,7 @@ class SpendingHeatmapService {
       busiestDay: _weekdayNames[busiestIdx],
       quietestDay: _weekdayNames[quietestIdx],
       weekdayAverages: weekdayAverages,
-      monthsSpanned: months,
+      monthsSpanned: month != null ? 1 : months,
       topCategory: topCatEntry.key,
       topCategoryAmount: topCatEntry.value,
     );

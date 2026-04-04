@@ -56,88 +56,6 @@ class SupabaseAuthService {
     );
   }
 
-  Future<AuthResponse> signInWithPassword({
-    required String email,
-    required String password,
-  }) async {
-    if (!_configured) {
-      throw StateError('Supabase is not configured.');
-    }
-
-    final response = await Supabase.instance.client.auth.signInWithPassword(
-      email: email.trim().toLowerCase(),
-      password: password,
-    );
-
-    if (response.user == null) {
-      throw StateError('Sign-in failed. Please check your credentials.');
-    }
-
-    await _upsertUserProfile(
-      userId: response.user!.id,
-      email: response.user!.email ?? email,
-    );
-    return response;
-  }
-
-  Future<AuthResponse> signUpWithPassword({
-    required String email,
-    required String password,
-  }) async {
-    if (!_configured) {
-      throw StateError('Supabase is not configured.');
-    }
-
-    final response = await Supabase.instance.client.auth.signUp(
-      email: email.trim().toLowerCase(),
-      password: password,
-    );
-
-    final user = response.user;
-    if (user != null && user.email != null) {
-      await _upsertUserProfile(userId: user.id, email: user.email!);
-    }
-
-    return response;
-  }
-
-  Future<AuthResponse> authenticateWithEmailPassword({
-    required String email,
-    required String password,
-  }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-
-    try {
-      return await signInWithPassword(
-        email: normalizedEmail,
-        password: password,
-      );
-    } on AuthException catch (e) {
-      final message = e.message.toLowerCase();
-      final shouldCreate =
-          message.contains('invalid login credentials') ||
-          message.contains('email not confirmed') ||
-          message.contains('user not found') ||
-          message.contains('invalid email or password');
-      if (!shouldCreate) {
-        rethrow;
-      }
-    }
-
-    final signUp = await signUpWithPassword(
-      email: normalizedEmail,
-      password: password,
-    );
-
-    if (signUp.session == null) {
-      throw StateError(
-        'Account created. Verify your email once, then sign in again.',
-      );
-    }
-
-    return signUp;
-  }
-
   Future<void> verifyOtp({
     required String email,
     required String otpCode,
@@ -162,29 +80,6 @@ class SupabaseAuthService {
     });
   }
 
-  Future<void> _upsertUserProfile({
-    required String userId,
-    required String email,
-  }) async {
-    final normalized = email.trim().toLowerCase();
-
-    await Supabase.instance.client.from('users').upsert({
-      'id': userId,
-      'email': normalized,
-      'name': normalized.split('@').first,
-    });
-
-    // Keep legacy compatibility if older schema still uses profiles.
-    try {
-      await Supabase.instance.client.from('profiles').upsert({
-        'id': userId,
-        'email': normalized,
-      });
-    } catch (_) {
-      // Ignore if profiles table does not exist.
-    }
-  }
-
   Future<void> signOut() async {
     if (!_configured) return;
     await Supabase.instance.client.auth.signOut();
@@ -192,5 +87,31 @@ class SupabaseAuthService {
 
   String? get currentUserEmail {
     return currentUser?.email?.trim().toLowerCase();
+  }
+
+  /// User-facing text for sign-in errors (rate limits, etc.).
+  static String describeAuthError(Object error) {
+    if (error is AuthException) {
+      final m = error.message.toLowerCase();
+      final code = (error.code ?? '').toLowerCase();
+      if (error.statusCode == '429' ||
+          m.contains('rate limit') ||
+          m.contains('too many') ||
+          code.contains('rate') ||
+          m.contains('email rate')) {
+        return 'Too many sign-in emails for now. Wait about an hour, or use the '
+            '6-digit code from an email you already received.\n\n'
+            'Tip: In Supabase go to Authentication → add Custom SMTP (e.g. Resend) '
+            'for higher limits. Avoid tapping "Send" many times while testing.';
+      }
+      return error.message;
+    }
+    final s = error.toString().toLowerCase();
+    if (s.contains('rate') || s.contains('429') || s.contains('too many')) {
+      return describeAuthError(
+        AuthException(error.toString(), statusCode: '429'),
+      );
+    }
+    return error.toString();
   }
 }

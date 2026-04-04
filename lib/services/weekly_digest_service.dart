@@ -114,6 +114,11 @@ class WeeklyDigest {
     required this.highlights,
     required this.weeklyTip,
   });
+
+  // Backward-compatible aliases for older callers/tests.
+  String get weekLabel => '${weekStart.day}/${weekStart.month} - ${weekEnd.day}/${weekEnd.month}';
+  double? get weekOverWeekChange => spendingChangePercent;
+  String get tip => weeklyTip;
 }
 
 class WeeklyDigestService {

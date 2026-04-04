@@ -313,10 +313,8 @@ class _SuggestionCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final difficultyColor = _difficultyColor(suggestion.difficulty);
-    final difficultyLabel =
-        suggestion.difficulty.name[0].toUpperCase() +
-        suggestion.difficulty.name.substring(1);
+    final difficultyColor = _difficultyColor(suggestion.difficultyLevel);
+    final difficultyLabel = suggestion.difficulty;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

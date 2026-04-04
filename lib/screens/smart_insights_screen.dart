@@ -257,7 +257,7 @@ class _InsightCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(insight.icon, size: 28, color: severityColor),
+                    Icon(insight.iconData, size: 28, color: severityColor),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

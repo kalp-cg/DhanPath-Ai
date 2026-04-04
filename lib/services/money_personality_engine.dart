@@ -72,6 +72,10 @@ class MoneyPersonality {
     required this.analyzedAt,
     required this.transactionsAnalyzed,
   });
+
+  // Backward-compatible aliases for older callers/tests.
+  String get personalityType => title;
+  String get mantra => financialMantra;
 }
 
 class MoneyPersonalityEngine {
@@ -437,7 +441,14 @@ class MoneyPersonalityEngine {
       subtitle: 'More data needed',
       description:
           'We need at least 10 transactions to analyze your personality. Keep tracking and check back soon!',
-      traits: [],
+      traits: const [
+        PersonalityTrait(
+          name: 'Discipline',
+          icon: Icons.straighten_rounded,
+          score: 50,
+          description: 'Not enough data yet. Add more transactions.',
+        ),
+      ],
       strengths: ['You\'ve started tracking — that\'s step one!'],
       watchOuts: ['Add more transactions for accurate analysis'],
       financialMantra:

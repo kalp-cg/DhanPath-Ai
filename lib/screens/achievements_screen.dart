@@ -321,7 +321,7 @@ class _RecentBadge extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(badge.icon, size: 32, color: cs.primary),
+          Icon(badge.iconData, size: 32, color: cs.primary),
           const SizedBox(height: 6),
           Text(
             badge.name,
@@ -375,7 +375,7 @@ class _BadgeCard extends StatelessWidget {
           child: Column(
             children: [
               Icon(
-                badge.icon,
+                badge.iconData,
                 size: 28,
                 color: badge.isUnlocked ? cs.primary : Colors.grey,
               ),
@@ -428,7 +428,7 @@ class _BadgeCard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(badge.icon, size: 56, color: cs.primary),
+            Icon(badge.iconData, size: 56, color: cs.primary),
             const SizedBox(height: 12),
             Text(
               badge.name,

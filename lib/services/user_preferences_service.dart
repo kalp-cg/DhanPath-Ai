@@ -13,6 +13,12 @@ class UserPreferencesService {
   static const String _currencySymbolKey = 'user_currency_symbol';
   static const String _onboardingCompleteKey = 'onboarding_complete';
   static const String _simpleModeKey = 'simple_mode';
+  static const String _cloudEmailKey = 'cloud_email';
+  static const String _cloudDashboardUrlKey = 'cloud_dashboard_url';
+  static const String _cloudFamilyIdKey = 'cloud_family_id';
+
+  /// Production dashboard (override via [setCloudDashboardUrl] for self-hosted).
+  static const String defaultCloudDashboardUrl = 'https://dhan-path-ai.vercel.app';
 
   SharedPreferences? _prefs;
 
@@ -43,6 +49,53 @@ class UserPreferencesService {
   Future<void> setSimpleMode(bool value) async {
     final prefs = await _preferences;
     await prefs.setBool(_simpleModeKey, value);
+  }
+
+  // ─── Cloud Sync Preferences ───
+
+  Future<String> getCloudEmail() async {
+    final prefs = await _preferences;
+    return prefs.getString(_cloudEmailKey) ?? '';
+  }
+
+  Future<void> setCloudEmail(String email) async {
+    final prefs = await _preferences;
+    await prefs.setString(_cloudEmailKey, email.trim().toLowerCase());
+  }
+
+  Future<String> getCloudDashboardUrl() async {
+    final prefs = await _preferences;
+    return prefs.getString(_cloudDashboardUrlKey) ?? '';
+  }
+
+  /// Saved URL, or [defaultCloudDashboardUrl] if the user never set one.
+  Future<String> getEffectiveCloudDashboardUrl() async {
+    final saved = await getCloudDashboardUrl();
+    final t = saved.trim();
+    return t.isNotEmpty ? t : defaultCloudDashboardUrl;
+  }
+
+  /// Persists the default dashboard URL once so background sync can run without manual setup.
+  Future<void> ensureDefaultCloudDashboardUrl() async {
+    final saved = await getCloudDashboardUrl();
+    if (saved.trim().isEmpty) {
+      await setCloudDashboardUrl(defaultCloudDashboardUrl);
+    }
+  }
+
+  Future<void> setCloudDashboardUrl(String url) async {
+    final prefs = await _preferences;
+    await prefs.setString(_cloudDashboardUrlKey, url.trim());
+  }
+
+  Future<String> getCloudFamilyId() async {
+    final prefs = await _preferences;
+    return prefs.getString(_cloudFamilyIdKey) ?? '';
+  }
+
+  Future<void> setCloudFamilyId(String familyId) async {
+    final prefs = await _preferences;
+    await prefs.setString(_cloudFamilyIdKey, familyId.trim());
   }
 
   // ─── User Name ───

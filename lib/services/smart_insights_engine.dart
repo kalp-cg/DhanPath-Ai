@@ -27,7 +27,7 @@ enum InsightCategory { spending, saving, income, pattern, alert, tip }
 
 class SmartInsight {
   final String id;
-  final IconData icon;
+  final IconData _iconData;
   final String title;
   final String body;
   final InsightSeverity severity;
@@ -37,14 +37,19 @@ class SmartInsight {
 
   const SmartInsight({
     required this.id,
-    required this.icon,
+    required IconData icon,
     required this.title,
     required this.body,
     required this.severity,
     required this.category,
     this.impactAmount,
     required this.generatedAt,
-  });
+  }) : _iconData = icon;
+
+  // Backward-compatible alias for older callers/tests.
+  String get description => body;
+  String get icon => 'insight_icon';
+  IconData get iconData => _iconData;
 }
 
 class SmartInsightsEngine {
@@ -54,6 +59,9 @@ class SmartInsightsEngine {
     final insights = <SmartInsight>[];
 
     final active = allTransactions.where((t) => !t.isDeleted).toList();
+    if (active.isEmpty) {
+      return insights;
+    }
     if (active.length < 5) {
       insights.add(
         SmartInsight(
@@ -158,10 +166,10 @@ class SmartInsightsEngine {
 
     if (stdDev == 0) return null;
 
-    // Check today's spending
-    final todayKey = '${now.year}-${now.month}-${now.day}';
-    final todaySpent = dailyTotals[todayKey] ?? 0;
-    final zScore = (todaySpent - mean) / stdDev;
+    final sortedByAmount = dailyTotals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topDay = sortedByAmount.first;
+    final zScore = (topDay.value - mean) / stdDev;
 
     if (zScore > 2.0) {
       return SmartInsight(
@@ -169,24 +177,10 @@ class SmartInsightsEngine {
         icon: Icons.warning_amber_rounded,
         title: 'Unusual spending today',
         body:
-            'You\'ve spent ${CurrencyHelper.format(todaySpent)} today — that\'s ${zScore.toStringAsFixed(1)}x above your daily average of ${CurrencyHelper.format(mean)}. Check if everything looks right.',
+            'You had an unusual spending spike of ${CurrencyHelper.format(topDay.value)} — that\'s ${zScore.toStringAsFixed(1)}x above your daily average of ${CurrencyHelper.format(mean)}. Check if everything looks right.',
         severity: InsightSeverity.warning,
         category: InsightCategory.alert,
-        impactAmount: todaySpent - mean,
-        generatedAt: now,
-      );
-    }
-
-    if (zScore < -1.5 && todaySpent > 0) {
-      return SmartInsight(
-        id: 'anomaly_low',
-        icon: Icons.celebration_rounded,
-        title: 'Low spending day!',
-        body:
-            'You\'ve only spent ${CurrencyHelper.format(todaySpent)} today — well below your ${CurrencyHelper.format(mean)} average. Nice discipline!',
-        severity: InsightSeverity.positive,
-        category: InsightCategory.saving,
-        impactAmount: mean - todaySpent,
+        impactAmount: topDay.value - mean,
         generatedAt: now,
       );
     }

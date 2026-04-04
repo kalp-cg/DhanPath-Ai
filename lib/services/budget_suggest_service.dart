@@ -26,7 +26,7 @@ class BudgetSuggestion {
   final double stretchBudget; // aggressive target
   final double potentialMonthlySaving;
   final double potentialAnnualSaving;
-  final BudgetDifficulty difficulty;
+  final BudgetDifficulty _difficulty;
   final String rationale;
   final bool isEssential; // rent, groceries, bills = essential
 
@@ -38,10 +38,26 @@ class BudgetSuggestion {
     required this.stretchBudget,
     required this.potentialMonthlySaving,
     required this.potentialAnnualSaving,
-    required this.difficulty,
+    required BudgetDifficulty difficulty,
     required this.rationale,
     required this.isEssential,
-  });
+  }) : _difficulty = difficulty;
+
+  // Backward-compatible alias for older callers/tests.
+  double get suggestedAmount => suggestedBudget;
+  String get difficulty {
+    switch (_difficulty) {
+      case BudgetDifficulty.easy:
+        return 'Easy';
+      case BudgetDifficulty.moderate:
+        return 'Moderate';
+      case BudgetDifficulty.stretch:
+        return 'Challenging';
+      case BudgetDifficulty.aggressive:
+        return 'Hard';
+    }
+  }
+  BudgetDifficulty get difficultyLevel => _difficulty;
 }
 
 class BudgetPlan {
@@ -66,6 +82,9 @@ class BudgetPlan {
     required this.overallAdvice,
     required this.generatedAt,
   });
+
+  // Backward-compatible alias for older callers/tests.
+  double get totalSuggested => totalSuggestedBudget;
 }
 
 class BudgetSuggestService {

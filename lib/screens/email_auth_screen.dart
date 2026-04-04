@@ -14,12 +14,17 @@ class EmailAuthScreen extends StatefulWidget {
 
 class _EmailAuthScreenState extends State<EmailAuthScreen> {
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  bool _isSubmitting = false;
-  bool _obscurePassword = true;
+  final TextEditingController _otpController = TextEditingController();
+  bool _isSending = false;
+  bool _isVerifying = false;
+  bool _otpSent = false;
   String? _error;
   String? _info;
+  DateTime? _lastSendRequested;
   final UserPreferencesService _preferences = UserPreferencesService();
+
+  /// Reduces accidental bursts that hit Supabase’s hourly email cap faster.
+  static const Duration _minSecondsBetweenSends = Duration(seconds: 60);
 
   @override
   void initState() {
@@ -36,47 +41,69 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    final email = _emailController.text.trim().toLowerCase();
-    final password = _passwordController.text;
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Email and password are required.');
-      return;
-    }
-    if (password.length < 6) {
-      setState(() => _error = 'Password must be at least 6 characters.');
-      return;
+  Future<void> _sendOtp() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) return;
+
+    final last = _lastSendRequested;
+    if (last != null) {
+      final wait = _minSecondsBetweenSends - DateTime.now().difference(last);
+      if (wait > Duration.zero) {
+        setState(() {
+          _error =
+              'Please wait ${wait.inSeconds}s before sending again (avoids email rate limits).';
+        });
+        return;
+      }
     }
 
     setState(() {
-      _isSubmitting = true;
+      _isSending = true;
+      _error = null;
+      _info = null;
+    });
+    _lastSendRequested = DateTime.now();
+    try {
+      await SupabaseAuthService.instance.sendOtp(email: email);
+      if (!mounted) return;
+      setState(() {
+        _otpSent = true;
+        _info =
+            'Check your inbox for $email. Copy the 6-digit code from the email '
+            '(the email also has a magic link if you prefer the web).';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = SupabaseAuthService.describeAuthError(e));
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    final email = _emailController.text.trim();
+    final code = _otpController.text.trim();
+    if (email.isEmpty || code.isEmpty) return;
+    setState(() {
+      _isVerifying = true;
       _error = null;
       _info = null;
     });
     try {
-      await SupabaseAuthService.instance.authenticateWithEmailPassword(
-        email: email,
-        password: password,
-      );
+      await SupabaseAuthService.instance.verifyOtp(email: email, otpCode: code);
       await _preferences.setCloudEmail(email);
+      await _preferences.ensureDefaultCloudDashboardUrl();
       if (!mounted) return;
       widget.onSuccess();
     } catch (e) {
       if (!mounted) return;
-      final message = e.toString();
-      setState(() {
-        if (message.toLowerCase().contains('account created')) {
-          _info = message;
-        } else {
-          _error = message;
-        }
-      });
+      setState(() => _error = SupabaseAuthService.describeAuthError(e));
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isVerifying = false);
     }
   }
 
@@ -94,10 +121,6 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Sign in with email and password. New account is created automatically if needed.',
-                ),
-                const SizedBox(height: 12),
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -107,29 +130,26 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'At least 6 characters',
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(
-                        () => _obscurePassword = !_obscurePassword,
-                      ),
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
+                ElevatedButton(
+                  onPressed: _isSending ? null : _sendOtp,
+                  child: Text(_isSending ? 'Sending...' : 'Send sign-in email'),
+                ),
+                if (_otpSent) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: '6-digit code',
+                      hintText: 'From your email (next to the magic link)',
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  child: Text(_isSubmitting ? 'Please wait...' : 'Continue'),
-                ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: _isVerifying ? null : _verifyOtp,
+                    child: Text(_isVerifying ? 'Verifying...' : 'Verify OTP'),
+                  ),
+                ],
                 if (_info != null) ...[
                   const SizedBox(height: 10),
                   Text(_info!, style: TextStyle(color: cs.primary)),

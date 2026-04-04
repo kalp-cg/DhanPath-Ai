@@ -37,7 +37,8 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
         builder: (context, provider, _) {
           final data = SpendingHeatmapService.generate(
             provider.allTransactions,
-            months: _selectedMonths,
+            null,
+            _selectedMonths,
           );
 
           return ListView(
@@ -132,7 +133,7 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
                             height: 12,
                             margin: const EdgeInsets.only(left: 2),
                             decoration: BoxDecoration(
-                              color: _intensityColor(i, isDark),
+                              color: _intensityColor(i.index, isDark),
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -258,18 +259,20 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
     );
   }
 
-  static Color _intensityColor(HeatmapIntensity intensity, bool isDark) {
+  static Color _intensityColor(int intensity, bool isDark) {
     switch (intensity) {
-      case HeatmapIntensity.zero:
+      case 0:
         return isDark ? const Color(0xFF1A1A1A) : const Color(0xFFEEEEEE);
-      case HeatmapIntensity.low:
+      case 1:
         return isDark ? const Color(0xFF1B5E30) : const Color(0xFFC8E6C9);
-      case HeatmapIntensity.medium:
+      case 2:
         return isDark ? const Color(0xFF2E7D32) : const Color(0xFF81C784);
-      case HeatmapIntensity.high:
+      case 3:
         return isDark ? const Color(0xFFE65100) : const Color(0xFFFFB74D);
-      case HeatmapIntensity.extreme:
+      case 4:
         return isDark ? const Color(0xFFC62828) : const Color(0xFFEF5350);
+      default:
+        return isDark ? const Color(0xFF1A1A1A) : const Color(0xFFEEEEEE);
     }
   }
 }

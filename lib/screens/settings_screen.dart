@@ -6,10 +6,8 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../services/backup_service.dart';
-import '../services/cloud_sync_service.dart';
 import '../services/secure_storage_service.dart';
 import '../services/user_preferences_service.dart';
-import '../services/supabase_auth_service.dart';
 import '../screens/manage_categories_screen.dart';
 import '../screens/rules_screen.dart';
 import '../screens/unrecognized_sms_screen.dart';
@@ -18,6 +16,7 @@ import '../screens/help_faq_screen.dart';
 import '../screens/privacy_policy_screen.dart';
 import '../screens/notification_settings_screen.dart';
 import '../screens/pdf_upload_screen.dart';
+import '../screens/cloud_setup_screen.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -165,6 +164,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingSm),
         children: [
+          _SectionHeader(title: 'Family & cloud'),
+          _SettingsCard(
+            children: [
+              _SettingsTile(
+                icon: Icons.groups_rounded,
+                iconColor: const Color(0xFF1E88E5),
+                title: 'Family workspace & sync',
+                subtitle: 'Dashboard URL, open web app, upload transactions',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CloudSetupScreen()),
+                ),
+              ),
+            ],
+          ),
           // ── Preferences ──
           _SectionHeader(title: 'Preferences'),
           _SettingsCard(
@@ -408,96 +422,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const PdfUploadScreen()),
                 ),
-              ),
-              const _TileDivider(),
-              _SettingsTile(
-                icon: Icons.cloud_upload_rounded,
-                iconColor: const Color(0xFF1E88E5),
-                title: 'Sync to Family Dashboard',
-                subtitle: 'Push transactions to parent dashboard',
-                onTap: () async {
-                  final auth = SupabaseAuthService.instance;
-                  final session = auth.currentSession;
-                  if (!auth.isConfigured || session?.accessToken == null) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Sign in with email first to enable cloud sync.',
-                          ),
-                        ),
-                      );
-                    }
-                    return;
-                  }
-
-                  final familyCtrl = TextEditingController();
-                  final dashboardCtrl = TextEditingController(
-                    text: 'http://10.0.2.2:3000',
-                  );
-                  final form = await showDialog<Map<String, String>>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Sync Configuration'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextField(
-                            controller: dashboardCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Dashboard URL',
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: familyCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Family ID',
-                            ),
-                          ),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Cancel'),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.pop(ctx, {
-                            'dashboardUrl': dashboardCtrl.text.trim(),
-                            'familyId': familyCtrl.text.trim(),
-                          }),
-                          child: const Text('Sync'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (form == null ||
-                      (form['dashboardUrl'] ?? '').isEmpty ||
-                      (form['familyId'] ?? '').isEmpty) {
-                    return;
-                  }
-
-                  final syncer = CloudSyncService(
-                    dashboardUrl: form['dashboardUrl']!,
-                    familyId: form['familyId']!,
-                    accessToken: session!.accessToken,
-                  );
-                  try {
-                    final count = await syncer.syncAll();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Synced $count transactions')),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Sync failed: $e')),
-                      );
-                    }
-                  }
-                },
               ),
               const _TileDivider(),
               _SettingsTile(

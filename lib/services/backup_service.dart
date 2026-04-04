@@ -6,9 +6,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import 'database_helper.dart';
+import 'export_service.dart';
 
 class BackupService {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final ExportService _exportService = ExportService();
 
   Future<void> createBackup() async {
     final dbPath = await getDatabasesPath();
@@ -31,6 +33,9 @@ class BackupService {
       XFile(backupPath),
     ], text: 'DhanPath Database Backup');
   }
+
+  // Backward-compatible aliases used by newer settings screens.
+  Future<void> createDatabaseBackup() => createBackup();
 
   Future<bool> restoreBackup() async {
     // Pick the backup file
@@ -63,5 +68,17 @@ class BackupService {
       return true;
     }
     return false;
+  }
+
+  // Backward-compatible aliases used by newer settings screens.
+  Future<bool> restoreDatabaseBackup() => restoreBackup();
+
+  Future<void> exportTransactionsToCsv() async {
+    // Export all available history in CSV format.
+    await _exportService.exportTransactions(
+      startDate: DateTime(1970, 1, 1),
+      endDate: DateTime.now(),
+      isPdf: false,
+    );
   }
 }

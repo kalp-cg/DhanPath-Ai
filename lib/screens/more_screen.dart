@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'cloud_setup_screen.dart';
 import 'settings_screen.dart';
 import 'achievements_screen.dart';
 import 'money_personality_screen.dart';
@@ -32,6 +33,19 @@ class MoreScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
+          _sectionLabel('Family & cloud', theme),
+          const SizedBox(height: 8),
+          _buildTile(
+            context,
+            icon: Icons.cloud_sync_rounded,
+            label: 'Family workspace',
+            subtitle: 'Sync SMS transactions to the web dashboard',
+            color: const Color(0xFF1E88E5),
+            isDark: isDark,
+            cs: cs,
+            onTap: () => _navigate(context, const CloudSetupScreen()),
+          ),
+          const SizedBox(height: 20),
           // ── Reports & Analysis ──
           _sectionLabel('Reports & Analysis', theme),
           const SizedBox(height: 8),

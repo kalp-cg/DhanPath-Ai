@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../models/transaction_model.dart';
 import '../core/di/service_locator.dart';
@@ -8,12 +6,9 @@ import '../domain/usecases/add_transaction_usecase.dart';
 import '../domain/usecases/delete_transaction_usecase.dart';
 import '../domain/usecases/search_transactions_usecase.dart';
 import '../services/database_helper.dart';
-import '../services/cloud_sync_service.dart';
 import '../core/parsers/bank_parser_factory.dart';
 import '../core/utils/result.dart';
 import '../services/sms_service.dart';
-import '../services/supabase_auth_service.dart';
-import '../services/user_preferences_service.dart';
 
 /// Monthly breakdown model matching Kotlin implementation
 class MonthlyBreakdown {
@@ -338,7 +333,6 @@ class TransactionProvider extends ChangeNotifier {
         _searchQuery = '';
         _isSearchActive = false;
         await loadTransactions();
-        unawaited(_syncToCloudIfConfigured());
         debugPrint('Total transactions after add: ${_transactions.length}');
         return true;
       },
@@ -365,7 +359,6 @@ class TransactionProvider extends ChangeNotifier {
       },
       (_) async {
         await loadTransactions();
-        unawaited(_syncToCloudIfConfigured());
         return true;
       },
     );
@@ -376,37 +369,10 @@ class TransactionProvider extends ChangeNotifier {
     try {
       await DatabaseHelper.instance.update(transaction);
       await loadTransactions();
-      unawaited(_syncToCloudIfConfigured());
     } catch (e) {
       _errorMessage = 'Error updating transaction: $e';
       debugPrint(_errorMessage);
       notifyListeners();
-    }
-  }
-
-  Future<void> _syncToCloudIfConfigured() async {
-    try {
-      final auth = SupabaseAuthService.instance;
-      if (!auth.isConfigured) return;
-
-      final token = auth.currentSession?.accessToken;
-      if (token == null || token.isEmpty) return;
-
-      final prefs = UserPreferencesService();
-      final dashboardUrl = await prefs.getCloudDashboardUrl();
-      if (dashboardUrl.isEmpty) return;
-
-      final familyId = await prefs.getCloudFamilyId();
-      final syncer = CloudSyncService(
-        dashboardUrl: dashboardUrl,
-        accessToken: token,
-        familyId: familyId.isEmpty ? null : familyId,
-      );
-
-      await syncer.syncAll();
-    } catch (e) {
-      // Do not interrupt local transaction flow when cloud sync fails.
-      debugPrint('Cloud auto-sync skipped: $e');
     }
   }
 

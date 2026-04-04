@@ -21,6 +21,11 @@ class HDFCBankParser extends BankParser {
 
   @override
   String? extractMerchant(String message, String sender) {
+    String? validMerchant(String raw) {
+      final cleaned = cleanMerchantName(raw);
+      return isValidMerchant(cleaned) ? cleaned : null;
+    }
+
     // Pattern 1: "Spent Rs.xxx From HDFC Bank Card xxxx At [MERCHANT] On xxx"
     if (message.contains('From HDFC Bank Card') && message.contains(' At ')) {
       final atMatch = RegExp(
@@ -28,7 +33,7 @@ class HDFCBankParser extends BankParser {
         caseSensitive: false,
       ).firstMatch(message);
       if (atMatch != null) {
-        return cleanMerchantName(atMatch.group(1)!);
+        return validMerchant(atMatch.group(1)!);
       }
     }
 
@@ -40,9 +45,9 @@ class HDFCBankParser extends BankParser {
       ).firstMatch(message);
       if (atmMatch != null) {
         final location = atmMatch.group(1)!.trim();
-        return location.isNotEmpty
-            ? 'ATM at ${cleanMerchantName(location)}'
-            : 'ATM';
+        if (location.isEmpty) return 'ATM';
+        final cleaned = cleanMerchantName(location);
+        return cleaned.isNotEmpty ? 'ATM at $cleaned' : 'ATM';
       }
       return 'ATM';
     }
@@ -66,7 +71,7 @@ class HDFCBankParser extends BankParser {
         // Use base class UPI extraction
         merchant = extractMerchantFromUpiVpa(merchant);
         if (merchant.isNotEmpty) {
-          return cleanMerchantName(merchant);
+          return validMerchant(merchant);
         }
       }
     }
@@ -79,7 +84,7 @@ class HDFCBankParser extends BankParser {
         caseSensitive: false,
       ).firstMatch(message);
       if (salaryMatch != null) {
-        return cleanMerchantName(salaryMatch.group(1)!);
+        return validMerchant(salaryMatch.group(1)!);
       }
     }
 
@@ -92,7 +97,7 @@ class HDFCBankParser extends BankParser {
       if (infoMatch != null) {
         final merchant = infoMatch.group(1)!.trim();
         if (merchant.isNotEmpty && merchant.toUpperCase() != 'UPI') {
-          return cleanMerchantName(merchant);
+          return validMerchant(merchant);
         }
       }
     }
@@ -107,7 +112,7 @@ class HDFCBankParser extends BankParser {
         ).firstMatch(message);
         if (vpaMatch != null) {
           final merchant = extractMerchantFromUpiVpa(vpaMatch.group(1)!);
-          return cleanMerchantName(merchant);
+          return validMerchant(merchant);
         }
       }
 
@@ -117,7 +122,7 @@ class HDFCBankParser extends BankParser {
         caseSensitive: false,
       ).firstMatch(message);
       if (vpaNameMatch != null) {
-        return cleanMerchantName(vpaNameMatch.group(1)!);
+        return validMerchant(vpaNameMatch.group(1)!);
       }
 
       // Just VPA username - extract full VPA including @
@@ -129,7 +134,7 @@ class HDFCBankParser extends BankParser {
         final vpaFull = vpaUsernameMatch.group(1)!.trim();
         final merchant = extractMerchantFromUpiVpa(vpaFull);
         if (merchant.length > 3 && !RegExp(r'^\\d+$').hasMatch(merchant)) {
-          return cleanMerchantName(merchant);
+          return validMerchant(merchant);
         }
       }
     }
@@ -141,7 +146,7 @@ class HDFCBankParser extends BankParser {
         caseSensitive: false,
       ).firstMatch(message);
       if (spentMatch != null) {
-        return cleanMerchantName(spentMatch.group(1)!);
+        return validMerchant(spentMatch.group(1)!);
       }
     }
 
@@ -152,7 +157,7 @@ class HDFCBankParser extends BankParser {
         caseSensitive: false,
       ).firstMatch(message);
       if (debitMatch != null) {
-        return cleanMerchantName(debitMatch.group(1)!);
+        return validMerchant(debitMatch.group(1)!);
       }
     }
 
@@ -163,14 +168,14 @@ class HDFCBankParser extends BankParser {
         caseSensitive: false,
       ).firstMatch(message);
       if (towardsMatch != null) {
-        return cleanMerchantName(towardsMatch.group(1)!);
+        return validMerchant(towardsMatch.group(1)!);
       }
     }
 
     // Pattern 11: HDFC Multi-line "To [Name] On [Date]"
     final toOnMatch = CompiledPatterns.hdfcToOn.firstMatch(message);
     if (toOnMatch != null) {
-      return cleanMerchantName(toOnMatch.group(1)!);
+      return validMerchant(toOnMatch.group(1)!);
     }
 
     // Fallback to base class

@@ -28,6 +28,7 @@ import 'services/notification_service.dart';
 import 'services/smart_notification_engine.dart';
 import 'services/user_preferences_service.dart';
 import 'services/supabase_auth_service.dart';
+import 'services/cloud_sync_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 
 void main() async {
@@ -216,6 +217,18 @@ class _AuthGuardState extends State<AuthGuard> {
 
   Future<void> _checkAuth() async {
     final auth = SupabaseAuthService.instance;
+    final email = auth.currentUserEmail;
+    if (email != null && email.isNotEmpty) {
+      final prefs = UserPreferencesService();
+      await prefs.setCloudEmail(email);
+      await prefs.ensureDefaultCloudDashboardUrl();
+      unawaited(
+        CloudSyncService.autoSyncCurrentUser().catchError((Object error) {
+          debugPrint('Auto cloud sync skipped/failed: $error');
+          return 0;
+        }),
+      );
+    }
     if (mounted) {
       setState(() {
         _isConfigured = auth.isConfigured;
@@ -227,6 +240,12 @@ class _AuthGuardState extends State<AuthGuard> {
 
   void _onAuthSuccess() {
     setState(() => _isAuthenticated = true);
+    unawaited(
+      CloudSyncService.autoSyncCurrentUser().catchError((Object error) {
+        debugPrint('Auto cloud sync skipped/failed: $error');
+        return 0;
+      }),
+    );
   }
 
   @override

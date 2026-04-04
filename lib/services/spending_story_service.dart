@@ -14,6 +14,36 @@ class StoryInsight {
     required this.body,
     required this.type,
   });
+
+  // Backward-compatible alias used by older UI/tests.
+  String get emoji {
+    if (type == StoryInsightType.headline &&
+        body.toLowerCase().contains('more than you earned')) {
+      return '⚠️';
+    }
+    if (type == StoryInsightType.savingsRate &&
+        body.toLowerCase().contains('outstanding')) {
+      return '🏆';
+    }
+    switch (type) {
+      case StoryInsightType.headline:
+        return '📊';
+      case StoryInsightType.topCategory:
+        return '🏷️';
+      case StoryInsightType.topMerchant:
+        return '🏪';
+      case StoryInsightType.comparison:
+        return '📈';
+      case StoryInsightType.streak:
+        return '🔥';
+      case StoryInsightType.noSpend:
+        return '💸';
+      case StoryInsightType.biggestDay:
+        return '⚡';
+      case StoryInsightType.savingsRate:
+        return '💰';
+    }
+  }
 }
 
 enum StoryInsightType {
@@ -88,7 +118,9 @@ class SpendingStoryService {
 
     // Active days with any transaction
     final activeDaySet = <String>{};
-    for (final t in txns) {
+    final todayCutoff = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    for (final t in txns.where((t) => t.type == TransactionType.expense)) {
+      if (isCurrentMonth && t.date.isAfter(todayCutoff)) continue;
       activeDaySet.add('${t.date.year}-${t.date.month}-${t.date.day}');
     }
     final activeDays = activeDaySet.length;
