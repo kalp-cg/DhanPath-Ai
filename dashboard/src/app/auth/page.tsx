@@ -1,13 +1,14 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import LogoMark from "@/components/LogoMark";
 
 type AuthMode = "login" | "signup";
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -16,6 +17,13 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
 
   const endpoint = useMemo(() => (mode === "login" ? "/api/auth/login" : "/api/auth/signup"), [mode]);
+
+  useEffect(() => {
+    const requestedMode = searchParams.get("mode");
+    if (requestedMode === "login" || requestedMode === "signup") {
+      setMode(requestedMode);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
