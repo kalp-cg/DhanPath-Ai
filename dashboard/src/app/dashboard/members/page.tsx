@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
+import Badge from "@/components/Badge";
+import MemberActionMenu from "@/components/ui/member-action-menu";
 import EmptyState from "@/components/EmptyState";
 
 type Member = { userId: string; name: string; email: string; role: "admin" | "member" };
@@ -18,6 +21,7 @@ export default function MembersPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState("all");
+  const [copyNotice, setCopyNotice] = useState<"success" | "error" | null>(null);
 
   const money = useMemo(() => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }), []);
 
@@ -26,7 +30,8 @@ export default function MembersPage() {
     const params = new URLSearchParams({
       year: String(now.getFullYear()),
       month: String(now.getMonth() + 1),
-      memberId: selectedMemberId,
+      // Always fetch full member set for stable dropdown options.
+      memberId: "all",
       page: "1",
       pageSize: "1",
     });
@@ -34,9 +39,23 @@ export default function MembersPage() {
     if (!res.ok) return;
     const data = await res.json().catch(() => ({}));
     setSummary(data as Summary);
-  }, [selectedMemberId]);
+  }, []);
 
   useEffect(() => { fetchSummary(); }, [fetchSummary]);
+
+  useEffect(() => {
+    if (!summary || selectedMemberId === "all") return;
+    const exists = (summary.members ?? []).some((member) => member.userId === selectedMemberId);
+    if (!exists) {
+      setSelectedMemberId("all");
+    }
+  }, [summary, selectedMemberId]);
+
+  useEffect(() => {
+    if (!copyNotice) return;
+    const timer = window.setTimeout(() => setCopyNotice(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [copyNotice]);
 
   async function changeRole(targetUserId: string, role: "admin" | "member") {
     const res = await fetch("/api/family/members", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetUserId, role }) });
@@ -54,17 +73,25 @@ export default function MembersPage() {
 
   async function copyInviteCode() {
     if (!summary?.inviteCode) return;
-    await navigator.clipboard.writeText(summary.inviteCode).catch(() => {});
+    try {
+      await navigator.clipboard.writeText(summary.inviteCode);
+      setCopyNotice("success");
+    } catch {
+      setCopyNotice("error");
+    }
   }
 
   if (!summary) return <EmptyState icon="👥" title="Loading members..." />;
 
   const statsMap = new Map((summary.memberTransactionStats ?? []).map((s) => [s.userId, s]));
   const members = summary.members ?? [];
+  const visibleMembers = selectedMemberId === "all"
+    ? members
+    : members.filter((m) => m.userId === selectedMemberId);
   const filteredMembers = selectedMemberId === "all"
     ? members
     : members.filter((m) => m.userId === selectedMemberId);
-  const comparison = members.map((member) => {
+  const comparison = visibleMembers.map((member) => {
     const stats = statsMap.get(member.userId);
     return {
       userId: member.userId,
@@ -88,18 +115,28 @@ export default function MembersPage() {
         <button className="btn btn--primary btn--sm" onClick={copyInviteCode} type="button">📋 Copy Code</button>
       </div>
 
+      {copyNotice && (
+        <div className={`wm-copy-alert ${copyNotice === "success" ? "wm-copy-alert--success" : "wm-copy-alert--error"}`} role="status" aria-live="polite">
+          <CheckCircle2 size={16} />
+          <strong>{copyNotice === "success" ? "Code copied" : "Copy failed"}</strong>
+          <span>{copyNotice === "success" ? "Invite code is copied. You can share it now." : "Clipboard permission blocked. Please copy manually."}</span>
+        </div>
+      )}
+
       <div className="panel" style={{ padding: "var(--space-4) var(--space-6)" }}>
         <div className="form-row" style={{ alignItems: "end" }}>
           <div className="form-group">
             <label className="form-label">View Member</label>
-            <select className="form-select" value={selectedMemberId} onChange={(e) => setSelectedMemberId(e.target.value)}>
-              <option value="all">All Members</option>
-              {members.map((m) => (
-                <option key={m.userId} value={m.userId}>
-                  {m.userId === summary.currentUserId ? `${m.name} (You)` : m.name}
-                </option>
-              ))}
-            </select>
+            <div className="wm-select-shell">
+              <select className="form-select wm-select" value={selectedMemberId} onChange={(e) => setSelectedMemberId(e.target.value)}>
+                <option value="all">All Members ({members.length})</option>
+                {members.map((m) => (
+                  <option key={m.userId} value={m.userId}>
+                    {m.userId === summary.currentUserId ? `${m.name} (You)` : m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -117,7 +154,7 @@ export default function MembersPage() {
               <li key={c.userId} className="data-list-item" style={{ flexDirection: "column", alignItems: "stretch", gap: "var(--space-2)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontWeight: 600 }}>{c.name}{c.isSelf ? " (You)" : ""}</span>
-                  <span className="chip chip--neutral">{c.transactionCount} txns</span>
+                  <Badge variant="neutral" label={`${c.transactionCount} txns`} />
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                   <span style={{ minWidth: 72, fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>Spend</span>
@@ -157,40 +194,44 @@ export default function MembersPage() {
 
             return (
               <li key={member.userId} className="data-list-item" style={{ flexDirection: "column", gap: "var(--space-3)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "var(--space-3)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                <div className="members-card-row">
+                  <div className="members-card-main">
                     <div style={{ width: 40, height: 40, borderRadius: "var(--radius-full)", background: "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--text-sm)", fontWeight: 700 }}>
                       {member.name?.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                         <span style={{ fontWeight: 600 }}>{member.name}</span>
-                        <span className={`chip chip--${member.role === "admin" ? "admin" : "neutral"}`}>{member.role}</span>
-                        {isOwner && <span className="chip chip--brand">Owner</span>}
-                        {isSelf && <span className="chip chip--info">You</span>}
+                        <Badge variant={member.role === "admin" ? "admin" : "neutral"} label={member.role} />
+                        {isOwner && <Badge variant="brand" label="Owner" />}
+                        {isSelf && <Badge variant="info" label="You" />}
                       </div>
                       <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{member.email}</span>
                     </div>
                   </div>
-                  {stats && (
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 700, fontSize: "var(--text-sm)" }}>{money.format(stats.totalSpend)}</div>
-                      <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{stats.transactionCount} txns</div>
-                    </div>
-                  )}
-                </div>
-                {summary.isCurrentUserAdmin && (
-                  <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
-                    {canManage && (
-                      <button className="btn btn--ghost btn--sm" onClick={() => changeRole(member.userId, member.role === "admin" ? "member" : "admin")} type="button">
-                        {member.role === "admin" ? "Make Member" : "Make Admin"}
-                      </button>
+
+                  <div className="members-card-side">
+                    {stats && (
+                      <div className="members-card-stats">
+                        <div style={{ fontWeight: 700, fontSize: "var(--text-sm)" }}>{money.format(stats.totalSpend)}</div>
+                        <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{stats.transactionCount} txns</div>
+                      </div>
                     )}
-                    {canRemove && (
-                      <button className="btn btn--danger btn--sm" onClick={() => removeMember(member.userId)} type="button">Remove</button>
+
+                    {summary.isCurrentUserAdmin && (canManage || canRemove) && (
+                      <div className="members-card-actions">
+                        <MemberActionMenu
+                          canTransferAdmin={canManage}
+                          canRemoveMember={canRemove}
+                          transferLabel={member.role === "admin" ? "Make Member" : "Transfer Admin"}
+                          onTransferAdmin={() => changeRole(member.userId, member.role === "admin" ? "member" : "admin")}
+                          onRemoveMember={() => removeMember(member.userId)}
+                        />
+                      </div>
                     )}
                   </div>
-                )}
+                </div>
+
               </li>
             );
           })}
