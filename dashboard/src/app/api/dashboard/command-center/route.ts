@@ -48,8 +48,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
+  const ownerUserId = String(access.family.ownerUserId);
+  const ownerMember = access.members.find((member) => member.userId === ownerUserId);
+
   if (!access.isAdmin) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    return NextResponse.json(
+      {
+        error: "forbidden",
+        message: "Command Center is available only for family admins.",
+        owner: ownerMember
+          ? {
+              userId: ownerMember.userId,
+              name: ownerMember.name,
+              email: ownerMember.email,
+            }
+          : null,
+      },
+      { status: 403 },
+    );
   }
 
   const { family, members } = access;
