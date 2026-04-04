@@ -11,8 +11,7 @@ Transform fragmented transaction data into actionable family decisions with an o
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
-[![Razorpay](https://img.shields.io/badge/Razorpay-Integrated-0C65E8?style=for-the-badge&logo=razorpay)](https://razorpay.com/)
+[![Watermalon UI](https://img.shields.io/badge/Watermalon-UI-FF6B6B?style=for-the-badge)](#)
 [![Stripe](https://img.shields.io/badge/Stripe-Integrated-635BFF?style=for-the-badge&logo=stripe)](https://stripe.com/)
 
 [![YouTube Demo](https://img.shields.io/badge/YouTube-Demo%20Video-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/hg5G3bS4rhg)
@@ -154,6 +153,7 @@ sequenceDiagram
 |------------|---------|
 | Flutter / Dart | Cross-platform app runtime |
 | SQLite (sqflite) | Offline transaction persistence |
+| Watermalon UI | Premium mobile UI styling and component direction for polished product experience |
 | Telephony APIs | SMS ingestion pipeline |
 | Provider | State management |
 | Secure Storage / Local Auth | Device-level protection |
@@ -165,9 +165,8 @@ sequenceDiagram
 | Next.js App Router | Frontend + API routes |
 | React 19 | UI rendering |
 | TypeScript | End-to-end type safety |
-| MongoDB + Mongoose | Operational datastore |
 | JWT Cookies | Session/auth mechanism |
-| Razorpay and Stripe | Payment and subscriptions |
+| Stripe | Payment and subscriptions |
 
 ---
 
