@@ -122,6 +122,14 @@ class MockTransactionRepository implements TransactionRepository {
       const Success(null);
 
   @override
+  Future<Result<bool>> existsSimilarTransaction({
+    required double amount,
+    required TransactionType type,
+    required DateTime transactionDate,
+    Duration window = const Duration(minutes: 2),
+  }) async => const Success(false);
+
+  @override
   Future<Result<int>> addTransaction(Transaction transaction) async =>
       insertTransaction(transaction);
 }
