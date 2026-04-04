@@ -68,6 +68,7 @@ export default function CommandCenterPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<CommandCenterResponse | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [owner, setOwner] = useState<{ name: string; email: string } | null>(null);
   const [focusCategory, setFocusCategory] = useState("all");
   const [cutPercent, setCutPercent] = useState(15);
   const [goalAmount, setGoalAmount] = useState(100000);
@@ -95,8 +96,22 @@ export default function CommandCenterPage() {
       if (!res.ok) {
         if (res.status === 403) {
           setForbidden(true);
-          setError("Command Center is available only for family admins.");
+          setOwner(
+            payload?.owner && typeof payload.owner === "object"
+              ? {
+                  name: String(payload.owner.name ?? "Workspace Admin"),
+                  email: String(payload.owner.email ?? ""),
+                }
+              : null,
+          );
+          setError(
+            typeof payload?.message === "string"
+              ? payload.message
+              : "Command Center is available only for family admins.",
+          );
         } else {
+          setForbidden(false);
+          setOwner(null);
           setError(typeof payload?.error === "string" ? payload.error : "Failed to load command center.");
         }
         setData(null);
@@ -104,6 +119,7 @@ export default function CommandCenterPage() {
       }
 
       setForbidden(false);
+      setOwner(null);
       setData(payload as CommandCenterResponse);
     } catch {
       setError("Unable to reach command center service. Please retry.");
@@ -137,6 +153,47 @@ export default function CommandCenterPage() {
           <SkeletonCard />
         </div>
       </div>
+    );
+  }
+
+  if (forbidden) {
+    return (
+      <section className="command-access-lock panel animate-scale" aria-live="polite">
+        <div className="command-access-lock-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2" />
+            <path d="M8 11V8a4 4 0 1 1 8 0v3" />
+            <circle cx="12" cy="16" r="1" />
+          </svg>
+        </div>
+
+        <span className="chip chip--warning">Admin Access Required</span>
+        <h2 className="command-access-lock-title">Command Center is restricted to workspace admin</h2>
+        <p className="command-access-lock-subtitle">
+          This module contains executive controls and family-wide decision actions. Only the admin who created the workspace can open it.
+        </p>
+
+        {owner && (
+          <div className="command-access-owner">
+            <span className="command-access-owner-label">Current workspace admin</span>
+            <strong>{owner.name}</strong>
+            {owner.email && <span>{owner.email}</span>}
+          </div>
+        )}
+
+        <div className="command-access-actions">
+          <button className="btn btn--primary" onClick={fetchCommandCenter} type="button">Check Access Again</button>
+          <button
+            className="btn btn--ghost"
+            onClick={() => window.history.back()}
+            type="button"
+          >
+            Go Back
+          </button>
+        </div>
+
+        {error && <p className="command-access-meta">{error}</p>}
+      </section>
     );
   }
 
