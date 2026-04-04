@@ -6,9 +6,13 @@ import { useRouter } from "next/navigation";
 type User = { id: string; email: string; name: string; familyId: string | null };
 
 type Summary = {
+  currentUserId: string;
+  isCurrentUserAdmin: boolean;
   familyId: string;
+  ownerUserId: string;
   familyName: string;
   inviteCode: string;
+  members: Array<{ userId: string; name: string; email: string; role: "admin" | "member" }>;
   selectedYear: number;
   selectedMonth: number;
   availableYears: number[];
@@ -170,8 +174,19 @@ export default function FamilyPage() {
     const data = await res.json().catch(() => ({}));
     const normalized: Summary = {
       familyId: String(data.familyId ?? ""),
+      ownerUserId: String(data.ownerUserId ?? ""),
+      currentUserId: String(data.currentUserId ?? ""),
+      isCurrentUserAdmin: Boolean(data.isCurrentUserAdmin),
       familyName: String(data.familyName ?? "Family"),
       inviteCode: String(data.inviteCode ?? "-"),
+      members: Array.isArray(data.members)
+        ? data.members.map((member: { userId?: unknown; name?: unknown; email?: unknown; role?: unknown }) => ({
+            userId: String(member.userId ?? ""),
+            name: String(member.name ?? "Member"),
+            email: String(member.email ?? ""),
+            role: member.role === "admin" ? "admin" : "member",
+          }))
+        : [],
       selectedYear: Number(data.selectedYear ?? selectedYear),
       selectedMonth: Number(data.selectedMonth ?? selectedMonth),
       availableYears: Array.isArray(data.availableYears) ? data.availableYears : [selectedYear],
@@ -385,6 +400,56 @@ export default function FamilyPage() {
     await fetchSummary();
   }
 
+  async function changeMemberRole(targetUserId: string, role: "admin" | "member") {
+    const res = await fetch("/api/family/members", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUserId, role }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? "could not update member role");
+      return;
+    }
+    setError(null);
+    await fetchSummary();
+  }
+
+  async function removeMember(targetUserId: string) {
+    const res = await fetch(`/api/family/members?targetUserId=${encodeURIComponent(targetUserId)}`, {
+      method: "DELETE",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? "could not remove member");
+      return;
+    }
+    setError(null);
+    await fetchSummary();
+  }
+
+  async function exportInvoicesCsv() {
+    const res = await fetch("/api/billing/invoices/export", { method: "GET" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "could not export invoices");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const contentDisposition = res.headers.get("content-disposition") ?? "";
+    const match = contentDisposition.match(/filename=\"?([^\"]+)\"?/i);
+    anchor.href = url;
+    anchor.download = match?.[1] ?? "dhanpath-billing-events.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setError(null);
+  }
+
   const storyText = useMemo(() => {
     if (!summary) return "No data yet.";
     const topCategory = summary.topCategories[0];
@@ -508,9 +573,50 @@ export default function FamilyPage() {
               <div className="billing-actions">
                 <button className="ghost" type="button" onClick={() => upgradePlan("pro")}>Upgrade to Pro</button>
                 <button className="ghost" type="button" onClick={() => upgradePlan("family_pro")}>Upgrade to Family Pro</button>
+                <button className="ghost" type="button" onClick={exportInvoicesCsv}>Export Invoices CSV</button>
               </div>
             </div>
           </section>
+
+          {summary?.isCurrentUserAdmin ? (
+            <section className="panel">
+              <h3>Member Access Control</h3>
+              <ul className="list member-admin-list">
+                {(summary?.members ?? []).map((member) => {
+                  const isCurrentUser = member.userId === summary.currentUserId;
+                  const isOwnerLike = member.userId === summary.ownerUserId;
+                  return (
+                    <li key={member.userId}>
+                      <div className="list-main">
+                        <span>
+                          {member.name} ({member.email})
+                        </span>
+                        <small>Role: {member.role}</small>
+                      </div>
+                      <div className="member-actions">
+                        <button
+                          type="button"
+                          className="ghost"
+                          disabled={isOwnerLike || (isCurrentUser && member.role === "admin")}
+                          onClick={() => changeMemberRole(member.userId, member.role === "admin" ? "member" : "admin")}
+                        >
+                          {member.role === "admin" ? "Make Member" : "Make Admin"}
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost"
+                          disabled={isCurrentUser || isOwnerLike}
+                          onClick={() => removeMember(member.userId)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ) : null}
 
           <section className="panel filter-panel">
             <div className="filter-row">

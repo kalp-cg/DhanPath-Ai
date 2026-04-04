@@ -352,6 +352,16 @@ select {
   color: #4b5d66;
 }
 
+.member-admin-list li {
+  align-items: center;
+}
+
+.member-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 740px) {
   .inline-form {
     grid-template-columns: 1fr;
@@ -393,5 +403,11 @@ select {
   .pager {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .member-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }
