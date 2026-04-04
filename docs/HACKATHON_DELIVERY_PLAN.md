@@ -1,55 +1,50 @@
 # DhanPath AI Hackathon Delivery Plan
 
-Date: 2026-04-03
-Goal: Ship a winning 3-minute demo with Family Mode + AI assistant + forecast storyline.
+Date: 2026-04-04
+Goal: Ship a strong demo with stable mobile + dashboard flow, MongoDB-backed family data, and one-way sync from app to dashboard.
 
-## Scope Lock
+## Scope Lock (Current)
 
-Must ship:
-- Family workspace create/join flow (mobile)
-- Family spend aggregation and forecast line logic
-- AI assistant over real transaction context
-- Demo-ready dashboard view
+Must show in demo:
+- Mobile offline-first expense tracking (SQLite + SMS parsing)
+- Dashboard auth + family create/join flow
+- Family-level spend summary and transaction views
+- One-way transaction sync from mobile to dashboard
+- Stable audit/billing/export story already present in dashboard
 
-Can defer if blocked:
-- Voice logging
-- Advanced analytics polish
+Defer for now:
+- Two-way sync and conflict resolution
+- Supabase data backend migration
+- Voice/PDF as mandatory demo path
 
-## Build Sequence
+## Architecture Decisions (Locked for Hackathon)
 
-1. Foundation (Now - 3h)
-- Add family workspace domain models and state provider
-- Add forecast calculation service + unit tests
-- Add integration interfaces for Supabase and Gemini
+- Dashboard backend and family data source is MongoDB.
+- Supabase can remain optional only for mobile auth/bootstrap use.
+- Sync direction is one-way only: mobile SQLite -> dashboard API -> MongoDB.
+- For demo reliability, keep generous limits and avoid strict blockers where possible.
 
-2. Family Sync (3h - 12h)
-- Supabase schema migration for users/families/family_members/transactions
-- RLS policy pass
-- Create/join by invite code
-- Sync parsed transactions with dedup key
+## Delivery Sequence
 
-3. AI Layer (12h - 20h)
-- Gemini chat service with safe structured prompt
-- Family-level questions from real data
-- Add API failure fallback responses for demo reliability
+1. Demo Stability
+- Validate auth, family create/join, and transaction listing flows on dashboard.
+- Validate mobile local transaction flow and sync trigger.
 
-4. Demo UX (20h - 32h)
-- Family cards + per-member spend bars
-- Forecast section with projected exhaustion day
-- Admin/member role display
+2. Data Confidence
+- Confirm transaction dedup path works for repeated sync.
+- Confirm family summary reflects synced transactions.
 
-5. Demo Hardening (32h - 48h)
-- Stable seed dataset
-- Scripted happy-path walkthrough
-- Backup offline scenario and fallback screenshots
+3. Demo Narrative Polish
+- Prepare one happy-path walkthrough with realistic data.
+- Prepare one fallback path if network/dashboard is unavailable.
 
-## Immediate Start Status
+4. Final Hardening
+- Smoke test both mobile and dashboard paths.
+- Freeze scope and avoid risky refactors before presentation.
 
-Completed in this commit window:
-- Family workspace models scaffolded
-- Family workspace provider scaffolded
-- Budget forecast service + unit tests added
-- Plan documented for focused execution
+## Current Status Notes
 
-Next implementation target:
-- Wire Supabase-backed FamilySyncService and replace in-memory implementation.
+- Family workspace provider in mobile currently uses in-memory service.
+- Cloud transaction sync service exists and calls dashboard APIs.
+- Dashboard APIs are MongoDB-backed with JWT auth.
+- Keep this state for hackathon demo; no architecture switch during final window.
