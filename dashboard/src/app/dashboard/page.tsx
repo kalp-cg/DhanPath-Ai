@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import KPICard from "@/components/KPICard";
+import Badge from "@/components/Badge";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 
@@ -144,10 +145,10 @@ export default function OverviewPage() {
           </div>
         </div>
         <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-          <span className="chip chip--brand">{summary.billing?.planName ?? "Free"} Plan</span>
-          <span className="chip chip--neutral">{summary.billing?.usage?.used ?? 0}/{summary.billing?.usage?.monthlyTxnLimit ?? 0} txns</span>
+          <Badge variant="brand" label={`${summary.billing?.planName ?? "Free"} Plan`} />
+          <Badge variant="neutral" label={`${summary.billing?.usage?.used ?? 0}/${summary.billing?.usage?.monthlyTxnLimit ?? 0} txns`} />
           {summary.billing?.status === "trialing" && (
-            <span className="chip chip--warning">Trial: {summary.billing.trial.trialDaysLeft}d left</span>
+            <Badge variant="warning" label={`Trial: ${summary.billing.trial.trialDaysLeft}d left`} />
           )}
         </div>
         <div className="form-group" style={{ minWidth: 220 }}>
@@ -245,7 +246,7 @@ export default function OverviewPage() {
                       <div className="data-list-main">
                         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                           <span style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{m.name}</span>
-                          <span className={`chip chip--${m.role === "admin" ? "admin" : "neutral"}`}>{m.role}</span>
+                          <Badge variant={m.role === "admin" ? "admin" : "neutral"} label={m.role} />
                         </div>
                         <div className="bar-track">
                           <div
@@ -283,10 +284,8 @@ export default function OverviewPage() {
                     <span style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>
                       {txn.merchant ?? txn.category}
                     </span>
-                    <span className={`chip chip--${txn.type === "credit" ? "credit" : "debit"}`}>
-                      {txn.type.toUpperCase()}
-                    </span>
-                    <span className="chip chip--neutral">{txn.source}</span>
+                    <Badge variant={txn.type === "credit" ? "credit" : "debit"} label={txn.type.toUpperCase()} />
+                    <Badge variant="neutral" label={txn.source} />
                   </div>
                   <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
                     {txn.userName} · {new Date(txn.txnTime).toLocaleString()}
@@ -312,7 +311,30 @@ export default function OverviewPage() {
           <span className="panel-subtitle">{selectedYear}</span>
         </div>
         {(summary.monthlyTimeline ?? []).length === 0 || monthTimelineTotal <= 0 ? (
-          <EmptyState icon="📈" title="No trend data" subtitle="Track spending for a few months to see trends" />
+          <div className="trend-empty" role="status" aria-live="polite">
+            <div className="trend-empty-head">
+              <span className="trend-empty-badge">Insights Locked</span>
+              <h4 className="trend-empty-title">No trend data yet</h4>
+              <p className="trend-empty-subtitle">Add transactions over the next few months to unlock your spending pattern view.</p>
+            </div>
+
+            <div className="trend-empty-preview" aria-hidden="true">
+              <div className="trend-empty-bar" style={{ ["--bar-h" as string]: "22%", ["--bar-d" as string]: "0ms" }}>
+                <span>Jan</span>
+              </div>
+              <div className="trend-empty-bar" style={{ ["--bar-h" as string]: "44%", ["--bar-d" as string]: "70ms" }}>
+                <span>Feb</span>
+              </div>
+              <div className="trend-empty-bar" style={{ ["--bar-h" as string]: "34%", ["--bar-d" as string]: "140ms" }}>
+                <span>Mar</span>
+              </div>
+              <div className="trend-empty-bar trend-empty-bar--highlight" style={{ ["--bar-h" as string]: "60%", ["--bar-d" as string]: "210ms" }}>
+                <span>Apr</span>
+              </div>
+            </div>
+
+            <button className="btn btn--primary btn--sm" type="button" onClick={() => router.push("/dashboard/transactions")}>Add First Transaction</button>
+          </div>
         ) : (
           <div style={{ display: "flex", alignItems: "flex-end", gap: "var(--space-2)", height: 160, padding: "var(--space-4) 0" }}>
             {(summary.monthlyTimeline ?? []).map((m) => {
