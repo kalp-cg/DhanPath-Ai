@@ -168,6 +168,8 @@ export default function FamilyPage() {
   const [fullTxType, setFullTxType] = useState("all");
   const [fullTxMemberId, setFullTxMemberId] = useState("all");
   const [fullTxCategory, setFullTxCategory] = useState("all");
+  const [fullTxYear, setFullTxYear] = useState(String(new Date().getFullYear()));
+  const [fullTxMonth, setFullTxMonth] = useState(String(new Date().getMonth() + 1));
   const [fullTxFrom, setFullTxFrom] = useState("");
   const [fullTxTo, setFullTxTo] = useState("");
   const [fullTxPagination, setFullTxPagination] = useState({
@@ -455,14 +457,30 @@ export default function FamilyPage() {
   ]);
 
   const fetchAllTransactions = useCallback(async () => {
+    let rangeFrom = "";
+    let rangeTo = "";
+    if (fullTxYear !== "all") {
+      const year = Number(fullTxYear);
+      if (fullTxMonth === "all") {
+        rangeFrom = `${year}-01-01`;
+        rangeTo = `${year}-12-31`;
+      } else {
+        const month = Number(fullTxMonth);
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0);
+        rangeFrom = start.toISOString().slice(0, 10);
+        rangeTo = end.toISOString().slice(0, 10);
+      }
+    }
+
     const params = new URLSearchParams({
       page: String(fullTxPage),
       pageSize: "20",
       type: fullTxType,
       memberId: fullTxMemberId,
       category: fullTxCategory,
-      from: fullTxFrom,
-      to: fullTxTo,
+      from: rangeFrom || fullTxFrom,
+      to: rangeTo || fullTxTo,
     });
 
     const res = await fetch(`/api/transactions?${params.toString()}`, { cache: "no-store" });
@@ -494,7 +512,16 @@ export default function FamilyPage() {
       hasPrev: Boolean(data.pagination?.hasPrev),
       hasNext: Boolean(data.pagination?.hasNext),
     });
-  }, [fullTxCategory, fullTxFrom, fullTxMemberId, fullTxPage, fullTxTo, fullTxType]);
+  }, [
+    fullTxCategory,
+    fullTxFrom,
+    fullTxMemberId,
+    fullTxMonth,
+    fullTxPage,
+    fullTxTo,
+    fullTxType,
+    fullTxYear,
+  ]);
 
   const fetchCaSchedule = useCallback(async () => {
     const res = await fetch("/api/family/ca-pack/settings", { cache: "no-store" });
@@ -713,13 +740,29 @@ export default function FamilyPage() {
   }
 
   async function exportTransactionsReport(format: "csv" | "html") {
+    let rangeFrom = "";
+    let rangeTo = "";
+    if (fullTxYear !== "all") {
+      const year = Number(fullTxYear);
+      if (fullTxMonth === "all") {
+        rangeFrom = `${year}-01-01`;
+        rangeTo = `${year}-12-31`;
+      } else {
+        const month = Number(fullTxMonth);
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0);
+        rangeFrom = start.toISOString().slice(0, 10);
+        rangeTo = end.toISOString().slice(0, 10);
+      }
+    }
+
     const params = new URLSearchParams({
       format,
       type: fullTxType,
       memberId: fullTxMemberId,
       category: fullTxCategory,
-      from: fullTxFrom,
-      to: fullTxTo,
+      from: rangeFrom || fullTxFrom,
+      to: rangeTo || fullTxTo,
     });
 
     const endpoint = `/api/family/transactions/report?${params.toString()}`;
@@ -1312,52 +1355,42 @@ export default function FamilyPage() {
           </section>
 
           <section className="panel">
-            <h3>
-              Transactions for {monthTitle} {selectedYear}
-            </h3>
-            <ul className="list txn-list">
-              {(summary?.recentTransactions ?? []).map((t) => (
-                <li key={t.id}>
-                  <div className="list-main">
-                    <span>
-                      {t.userName} · {t.category} · {t.merchant ?? "Unknown merchant"}
-                    </span>
-                    <small>{new Date(t.txnTime).toLocaleString()}</small>
-                    <small className={`chip ${t.type === "credit" ? "credit" : "debit"}`}>
-                      {t.type.toUpperCase()} · {t.source}
-                    </small>
-                  </div>
-                  <strong>{money.format(Number(t.amount))}</strong>
-                </li>
-              ))}
-            </ul>
-
-            <div className="pager">
-              <button
-                type="button"
-                className="ghost"
-                disabled={!summary?.pagination?.hasPrev}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </button>
-              <span>
-                Page {summary?.pagination?.page ?? 1} of {summary?.pagination?.totalPages ?? 1} · Total {summary?.pagination?.totalTransactions ?? 0}
-              </span>
-              <button
-                type="button"
-                className="ghost"
-                disabled={!summary?.pagination?.hasNext}
-                onClick={() => setPage((prev) => prev + 1)}
-              >
-                Next
-              </button>
-            </div>
-          </section>
-
-          <section className="panel">
-            <h3>All Transactions (Full History)</h3>
+            <h3>Transactions</h3>
             <div className="filter-row audit-filter-row">
+              <label>
+                Year
+                <select
+                  value={fullTxYear}
+                  onChange={(e) => {
+                    setFullTxYear(e.target.value);
+                    setFullTxPage(1);
+                  }}
+                >
+                  <option value="all">All Years</option>
+                  {(summary?.availableYears ?? [selectedYear]).map((year) => (
+                    <option key={year} value={String(year)}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Month
+                <select
+                  value={fullTxMonth}
+                  onChange={(e) => {
+                    setFullTxMonth(e.target.value);
+                    setFullTxPage(1);
+                  }}
+                >
+                  <option value="all">All Months</option>
+                  {Array.from({ length: 12 }, (_, idx) => (
+                    <option key={idx + 1} value={String(idx + 1)}>
+                      {new Date(2026, idx, 1).toLocaleString("en-US", { month: "long" })}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label>
                 Member
                 <select
@@ -1401,28 +1434,6 @@ export default function FamilyPage() {
                   }}
                 />
               </label>
-              <label>
-                From
-                <input
-                  type="date"
-                  value={fullTxFrom}
-                  onChange={(e) => {
-                    setFullTxFrom(e.target.value);
-                    setFullTxPage(1);
-                  }}
-                />
-              </label>
-              <label>
-                To
-                <input
-                  type="date"
-                  value={fullTxTo}
-                  onChange={(e) => {
-                    setFullTxTo(e.target.value);
-                    setFullTxPage(1);
-                  }}
-                />
-              </label>
             </div>
             <div className="audit-actions">
               <button
@@ -1432,6 +1443,8 @@ export default function FamilyPage() {
                   setFullTxMemberId("all");
                   setFullTxType("all");
                   setFullTxCategory("all");
+                  setFullTxYear(String(new Date().getFullYear()));
+                  setFullTxMonth(String(new Date().getMonth() + 1));
                   setFullTxFrom("");
                   setFullTxTo("");
                   setFullTxPage(1);
