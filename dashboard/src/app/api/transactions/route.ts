@@ -70,15 +70,131 @@ export async function GET(request: NextRequest) {
   const safePage = Math.min(page, totalPages);
   const skip = (safePage - 1) * pageSize;
 
-  const txns = await Transaction.find(query)
-    .sort({ txnTime: -1 })
-    .skip(skip)
-    .limit(pageSize)
-    .lean();
+  const trendEndAnchor = query.txnTime?.$lte ? new Date(query.txnTime.$lte) : new Date();
+  trendEndAnchor.setHours(23, 59, 59, 999);
 
-  const userIds = Array.from(new Set(txns.map((txn) => String(txn.userId))));
+  const monthAnchors = Array.from({ length: 6 }, (_, idx) => {
+    const d = new Date(trendEndAnchor.getFullYear(), trendEndAnchor.getMonth() - (5 - idx), 1);
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleString("en-US", { month: "short" }),
+      start: new Date(d.getFullYear(), d.getMonth(), 1),
+      end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+    };
+  });
+
+  const trendRangeStart = monthAnchors[0]?.start;
+  const trendRangeEnd = monthAnchors[monthAnchors.length - 1]?.end;
+
+  const trendQuery: {
+    familyId: unknown;
+    userId?: unknown;
+    category?: string;
+    txnTime?: { $gte?: Date; $lte?: Date };
+    type: "debit";
+  } = {
+    familyId: user.familyId,
+    type: "debit",
+  };
+
+  if (memberId !== "all") {
+    trendQuery.userId = memberId;
+  }
+
+  if (category !== "all") {
+    trendQuery.category = category;
+  }
+
+  if (trendRangeStart && trendRangeEnd) {
+    trendQuery.txnTime = {
+      $gte: trendRangeStart,
+      $lte: trendRangeEnd,
+    };
+  }
+
+  const [txns, groupedByUser, monthlyTrendByUser] = await Promise.all([
+    Transaction.find(query).sort({ txnTime: -1 }).skip(skip).limit(pageSize).lean(),
+    Transaction.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: "$userId",
+          debitTotal: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "debit"] }, "$amount", 0],
+            },
+          },
+          creditTotal: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "credit"] }, "$amount", 0],
+            },
+          },
+          transactionCount: { $sum: 1 },
+        },
+      },
+      { $sort: { debitTotal: -1, creditTotal: -1 } },
+    ]),
+    Transaction.aggregate([
+      { $match: trendQuery },
+      {
+        $group: {
+          _id: {
+            userId: "$userId",
+            year: { $year: "$txnTime" },
+            month: { $month: "$txnTime" },
+          },
+          amount: { $sum: "$amount" },
+        },
+      },
+    ]),
+  ]);
+
+  const userIds = Array.from(new Set([...txns.map((txn) => String(txn.userId)), ...groupedByUser.map((row) => String(row._id))]));
   const users = await User.find({ _id: { $in: userIds } }).lean();
   const nameMap = new Map(users.map((u) => [String(u._id), u.name ?? "Member"]));
+
+  const totalDebit = groupedByUser.reduce((sum, row) => sum + Number(row.debitTotal ?? 0), 0);
+  const totalCredit = groupedByUser.reduce((sum, row) => sum + Number(row.creditTotal ?? 0), 0);
+  const totalFlow = totalDebit + totalCredit;
+
+  const peopleWiseMembers = groupedByUser.map((row) => {
+    const userId = String(row._id);
+    const debitTotal = Number(row.debitTotal ?? 0);
+    const creditTotal = Number(row.creditTotal ?? 0);
+    const transactionCount = Number(row.transactionCount ?? 0);
+    const netTotal = creditTotal - debitTotal;
+    const flowTotal = debitTotal + creditTotal;
+    const spendSharePct = totalDebit > 0 ? (debitTotal / totalDebit) * 100 : 0;
+    const flowSharePct = totalFlow > 0 ? (flowTotal / totalFlow) * 100 : 0;
+
+    return {
+      userId,
+      userName: nameMap.get(userId) ?? "Member",
+      debitTotal,
+      creditTotal,
+      netTotal,
+      transactionCount,
+      spendSharePct,
+      flowSharePct,
+    };
+  });
+
+  const trendByUserMonth = new Map<string, number>();
+  monthlyTrendByUser.forEach((row) => {
+    const userId = String(row._id?.userId ?? "");
+    const year = Number(row._id?.year ?? 0);
+    const month = Number(row._id?.month ?? 0);
+    const amount = Number(row.amount ?? 0);
+    if (!userId || !year || !month) return;
+    trendByUserMonth.set(`${userId}::${year}-${String(month).padStart(2, "0")}`, amount);
+  });
+
+  const memberTrends = peopleWiseMembers.map((member) => ({
+    userId: member.userId,
+    values: monthAnchors.map((month) => trendByUserMonth.get(`${member.userId}::${month.key}`) ?? 0),
+  }));
 
   return NextResponse.json(
     {
@@ -86,6 +202,19 @@ export async function GET(request: NextRequest) {
         ...txn,
         userName: nameMap.get(String(txn.userId)) ?? txn.userEmail,
       })),
+      peopleWise: {
+        totals: {
+          totalDebit,
+          totalCredit,
+          totalNet: totalCredit - totalDebit,
+          totalTransactions,
+        },
+        members: peopleWiseMembers,
+        trend: {
+          labels: monthAnchors.map((month) => month.label),
+          members: memberTrends,
+        },
+      },
       pagination: {
         page: safePage,
         pageSize,

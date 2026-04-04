@@ -18,6 +18,49 @@ type FullTransaction = {
   txnTime: string;
 };
 
+type PeopleWiseInsight = {
+  userId: string;
+  userName: string;
+  debitTotal: number;
+  creditTotal: number;
+  netTotal: number;
+  transactionCount: number;
+  spendSharePct: number;
+  flowSharePct: number;
+};
+
+type FullTxPeopleWise = {
+  totals: {
+    totalDebit: number;
+    totalCredit: number;
+    totalNet: number;
+    totalTransactions: number;
+  };
+  members: PeopleWiseInsight[];
+  trend: {
+    labels: string[];
+    members: Array<{
+      userId: string;
+      values: number[];
+    }>;
+  };
+};
+
+type TxnDateRange = {
+  from: string;
+  to: string;
+};
+
+type FamilySectionKey =
+  | "all"
+  | "overview"
+  | "members"
+  | "analytics"
+  | "transactions"
+  | "audit"
+  | "billing"
+  | "ca-pack";
+
 type CaSchedule = {
   caEmail: string;
   dayOfMonth: number;
@@ -164,6 +207,21 @@ export default function FamilyPage() {
   const [auditFrom, setAuditFrom] = useState("");
   const [auditTo, setAuditTo] = useState("");
   const [fullTxns, setFullTxns] = useState<FullTransaction[]>([]);
+  const [fullTxPeopleWise, setFullTxPeopleWise] = useState<FullTxPeopleWise>({
+    totals: {
+      totalDebit: 0,
+      totalCredit: 0,
+      totalNet: 0,
+      totalTransactions: 0,
+    },
+    members: [],
+    trend: {
+      labels: [],
+      members: [],
+    },
+  });
+  const [fullTxPrevPeopleWise, setFullTxPrevPeopleWise] = useState<FullTxPeopleWise | null>(null);
+  const [showPeopleTrend, setShowPeopleTrend] = useState(true);
   const [fullTxPage, setFullTxPage] = useState(1);
   const [fullTxType, setFullTxType] = useState("all");
   const [fullTxMemberId, setFullTxMemberId] = useState("all");
@@ -189,6 +247,7 @@ export default function FamilyPage() {
     lastGeneratedAt: null,
   });
   const [generatedCaPack, setGeneratedCaPack] = useState<GeneratedCaPack | null>(null);
+  const [activeSection, setActiveSection] = useState<FamilySectionKey>("all");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -457,21 +516,52 @@ export default function FamilyPage() {
   ]);
 
   const fetchAllTransactions = useCallback(async () => {
-    let rangeFrom = "";
-    let rangeTo = "";
-    if (fullTxYear !== "all") {
-      const year = Number(fullTxYear);
-      if (fullTxMonth === "all") {
-        rangeFrom = `${year}-01-01`;
-        rangeTo = `${year}-12-31`;
-      } else {
+    const buildSelectedRange = (): TxnDateRange => {
+      if (fullTxYear !== "all") {
+        const year = Number(fullTxYear);
+        if (fullTxMonth === "all") {
+          return {
+            from: `${year}-01-01`,
+            to: `${year}-12-31`,
+          };
+        }
+
         const month = Number(fullTxMonth);
         const start = new Date(year, month - 1, 1);
         const end = new Date(year, month, 0);
-        rangeFrom = start.toISOString().slice(0, 10);
-        rangeTo = end.toISOString().slice(0, 10);
+        return {
+          from: start.toISOString().slice(0, 10),
+          to: end.toISOString().slice(0, 10),
+        };
       }
-    }
+
+      return {
+        from: fullTxFrom,
+        to: fullTxTo,
+      };
+    };
+
+    const shiftRangeBack = (range: TxnDateRange): TxnDateRange | null => {
+      if (!range.from || !range.to) return null;
+      const start = new Date(`${range.from}T00:00:00.000Z`);
+      const end = new Date(`${range.to}T00:00:00.000Z`);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+        return null;
+      }
+
+      const diffDays = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      const previousEnd = new Date(start);
+      previousEnd.setUTCDate(previousEnd.getUTCDate() - 1);
+      const previousStart = new Date(previousEnd);
+      previousStart.setUTCDate(previousStart.getUTCDate() - (diffDays - 1));
+
+      return {
+        from: previousStart.toISOString().slice(0, 10),
+        to: previousEnd.toISOString().slice(0, 10),
+      };
+    };
+
+    const selectedRange = buildSelectedRange();
 
     const params = new URLSearchParams({
       page: String(fullTxPage),
@@ -479,8 +569,8 @@ export default function FamilyPage() {
       type: fullTxType,
       memberId: fullTxMemberId,
       category: fullTxCategory,
-      from: rangeFrom || fullTxFrom,
-      to: rangeTo || fullTxTo,
+      from: selectedRange.from,
+      to: selectedRange.to,
     });
 
     const res = await fetch(`/api/transactions?${params.toString()}`, { cache: "no-store" });
@@ -504,6 +594,95 @@ export default function FamilyPage() {
         }))
       : [];
     setFullTxns(rows);
+
+    const peopleWiseRaw = data.peopleWise && typeof data.peopleWise === "object" ? data.peopleWise : {};
+    const totalsRaw = peopleWiseRaw.totals && typeof peopleWiseRaw.totals === "object" ? peopleWiseRaw.totals : {};
+    const membersRaw = Array.isArray(peopleWiseRaw.members) ? peopleWiseRaw.members : [];
+
+    setFullTxPeopleWise({
+      totals: {
+        totalDebit: Number(totalsRaw.totalDebit ?? 0),
+        totalCredit: Number(totalsRaw.totalCredit ?? 0),
+        totalNet: Number(totalsRaw.totalNet ?? 0),
+        totalTransactions: Number(totalsRaw.totalTransactions ?? 0),
+      },
+      members: membersRaw.map((member: Record<string, unknown>) => ({
+        userId: String(member.userId ?? ""),
+        userName: String(member.userName ?? "Member"),
+        debitTotal: Number(member.debitTotal ?? 0),
+        creditTotal: Number(member.creditTotal ?? 0),
+        netTotal: Number(member.netTotal ?? 0),
+        transactionCount: Number(member.transactionCount ?? 0),
+        spendSharePct: Number(member.spendSharePct ?? 0),
+        flowSharePct: Number(member.flowSharePct ?? 0),
+      })),
+      trend: {
+        labels:
+          peopleWiseRaw.trend && typeof peopleWiseRaw.trend === "object" && Array.isArray(peopleWiseRaw.trend.labels)
+            ? peopleWiseRaw.trend.labels.map((label: unknown) => String(label))
+            : [],
+        members:
+          peopleWiseRaw.trend && typeof peopleWiseRaw.trend === "object" && Array.isArray(peopleWiseRaw.trend.members)
+            ? peopleWiseRaw.trend.members.map((member: Record<string, unknown>) => ({
+                userId: String(member.userId ?? ""),
+                values: Array.isArray(member.values)
+                  ? member.values.map((value: unknown) => Number(value ?? 0))
+                  : [],
+              }))
+            : [],
+      },
+    });
+
+    const previousRange = shiftRangeBack(selectedRange);
+    if (showPeopleTrend && previousRange) {
+      const previousParams = new URLSearchParams({
+        page: "1",
+        pageSize: "20",
+        type: fullTxType,
+        memberId: fullTxMemberId,
+        category: fullTxCategory,
+        from: previousRange.from,
+        to: previousRange.to,
+      });
+
+      const previousRes = await fetch(`/api/transactions?${previousParams.toString()}`, { cache: "no-store" });
+      if (previousRes.ok) {
+        const previousData = await previousRes.json().catch(() => ({}));
+        const previousPeopleRaw =
+          previousData.peopleWise && typeof previousData.peopleWise === "object" ? previousData.peopleWise : {};
+        const previousTotalsRaw =
+          previousPeopleRaw.totals && typeof previousPeopleRaw.totals === "object" ? previousPeopleRaw.totals : {};
+        const previousMembersRaw = Array.isArray(previousPeopleRaw.members) ? previousPeopleRaw.members : [];
+
+        setFullTxPrevPeopleWise({
+          totals: {
+            totalDebit: Number(previousTotalsRaw.totalDebit ?? 0),
+            totalCredit: Number(previousTotalsRaw.totalCredit ?? 0),
+            totalNet: Number(previousTotalsRaw.totalNet ?? 0),
+            totalTransactions: Number(previousTotalsRaw.totalTransactions ?? 0),
+          },
+          members: previousMembersRaw.map((member: Record<string, unknown>) => ({
+            userId: String(member.userId ?? ""),
+            userName: String(member.userName ?? "Member"),
+            debitTotal: Number(member.debitTotal ?? 0),
+            creditTotal: Number(member.creditTotal ?? 0),
+            netTotal: Number(member.netTotal ?? 0),
+            transactionCount: Number(member.transactionCount ?? 0),
+            spendSharePct: Number(member.spendSharePct ?? 0),
+            flowSharePct: Number(member.flowSharePct ?? 0),
+          })),
+          trend: {
+            labels: [],
+            members: [],
+          },
+        });
+      } else {
+        setFullTxPrevPeopleWise(null);
+      }
+    } else {
+      setFullTxPrevPeopleWise(null);
+    }
+
     setFullTxPagination({
       page: Number(data.pagination?.page ?? 1),
       pageSize: Number(data.pagination?.pageSize ?? 20),
@@ -521,6 +700,7 @@ export default function FamilyPage() {
     fullTxTo,
     fullTxType,
     fullTxYear,
+    showPeopleTrend,
   ]);
 
   const fetchCaSchedule = useCallback(async () => {
@@ -908,6 +1088,52 @@ export default function FamilyPage() {
     family_joined: "Family Joined",
   };
 
+  const sectionOptions: Array<{ key: FamilySectionKey; label: string }> = [
+    { key: "all", label: "All Sections" },
+    { key: "overview", label: "Overview" },
+    { key: "members", label: "Members" },
+    { key: "analytics", label: "Analytics" },
+    { key: "transactions", label: "Transactions" },
+    { key: "audit", label: "Audit" },
+    { key: "billing", label: "Billing" },
+    { key: "ca-pack", label: "CA Pack" },
+  ];
+
+  const shouldShowSection = useCallback(
+    (section: FamilySectionKey) => activeSection === "all" || activeSection === section,
+    [activeSection],
+  );
+
+  const maxMemberFlow = useMemo(
+    () => Math.max(1, ...fullTxPeopleWise.members.map((member) => member.debitTotal + member.creditTotal)),
+    [fullTxPeopleWise.members],
+  );
+
+  const trendValuesByUser = useMemo(
+    () => new Map(fullTxPeopleWise.trend.members.map((member) => [member.userId, member.values])),
+    [fullTxPeopleWise.trend.members],
+  );
+
+  const previousDebitByUser = useMemo(
+    () => new Map((fullTxPrevPeopleWise?.members ?? []).map((member) => [member.userId, member.debitTotal])),
+    [fullTxPrevPeopleWise?.members],
+  );
+
+  const previousPeriodLabel = useMemo(() => {
+    if (fullTxYear !== "all") {
+      if (fullTxMonth === "all") {
+        return `vs ${Number(fullTxYear) - 1}`;
+      }
+
+      const month = Number(fullTxMonth);
+      const year = Number(fullTxYear);
+      const previousMonthDate = new Date(year, month - 2, 1);
+      return `vs ${previousMonthDate.toLocaleString("en-US", { month: "short" })} ${previousMonthDate.getFullYear()}`;
+    }
+
+    return "vs previous period";
+  }, [fullTxMonth, fullTxYear]);
+
   return (
     <main className="shell family-shell">
       <section className="panel header-panel">
@@ -948,6 +1174,38 @@ export default function FamilyPage() {
         </section>
       ) : (
         <>
+          <section className="panel section-nav-panel">
+            <div className="section-nav-head">
+              <h3>Navigate By Section</h3>
+              <p>Choose one area to focus, or keep All Sections.</p>
+            </div>
+            <div className="section-nav-tabs">
+              {sectionOptions.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  className={activeSection === option.key ? "pill active" : "pill"}
+                  onClick={() => setActiveSection(option.key)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <div className="section-nav-mobile">
+              <label>
+                Current Section
+                <select value={activeSection} onChange={(e) => setActiveSection(e.target.value as FamilySectionKey)}>
+                  {sectionOptions.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          {shouldShowSection("overview") ? (
           <section className="panel metrics">
             <div className="metrics-top">
               <div>
@@ -1001,8 +1259,9 @@ export default function FamilyPage() {
               </div>
             </div>
           </section>
+          ) : null}
 
-          {summary?.isCurrentUserAdmin ? (
+          {shouldShowSection("members") && summary?.isCurrentUserAdmin ? (
             <section className="panel">
               <h3>Member Access Control</h3>
               <ul className="list member-admin-list">
@@ -1041,6 +1300,7 @@ export default function FamilyPage() {
             </section>
           ) : null}
 
+          {shouldShowSection("overview") ? (
           <section className="panel filter-panel">
             <div className="filter-row">
               <label>
@@ -1077,7 +1337,9 @@ export default function FamilyPage() {
               </label>
             </div>
           </section>
+          ) : null}
 
+          {shouldShowSection("overview") ? (
           <section className="panel stack">
             <h3>Add Manual Transaction</h3>
             <form className="inline-form" onSubmit={addTransaction}>
@@ -1095,7 +1357,9 @@ export default function FamilyPage() {
             </form>
             {error && <p className="error">{error}</p>}
           </section>
+          ) : null}
 
+          {shouldShowSection("analytics") ? (
           <section className="panel grid-two">
             <div>
               <h3>People-wise Payment Split</h3>
@@ -1139,7 +1403,9 @@ export default function FamilyPage() {
               </ul>
             </div>
           </section>
+          ) : null}
 
+          {shouldShowSection("members") ? (
           <section className="panel">
             <h3>Member Totals ({monthTitle})</h3>
             <div className="member-pills">
@@ -1180,7 +1446,9 @@ export default function FamilyPage() {
               ))}
             </ul>
           </section>
+          ) : null}
 
+          {shouldShowSection("analytics") ? (
           <section className="panel grid-two">
             <div>
               <h3>Month-wise Spend ({selectedYear})</h3>
@@ -1222,7 +1490,9 @@ export default function FamilyPage() {
               </ul>
             </div>
           </section>
+          ) : null}
 
+          {shouldShowSection("analytics") ? (
           <section className="panel story-panel">
             <h3>Spending Story and Suggestions</h3>
             <p>{storyText}</p>
@@ -1232,7 +1502,9 @@ export default function FamilyPage() {
               ))}
             </ul>
           </section>
+          ) : null}
 
+          {shouldShowSection("billing") ? (
           <section className="panel">
             <h3>Billing Timeline</h3>
             <ul className="list">
@@ -1250,7 +1522,9 @@ export default function FamilyPage() {
               ))}
             </ul>
           </section>
+          ) : null}
 
+          {shouldShowSection("audit") ? (
           <section className="panel">
             <h3>Recent Access Activity</h3>
             <div className="filter-row audit-filter-row">
@@ -1359,7 +1633,9 @@ export default function FamilyPage() {
               </button>
             </div>
           </section>
+          ) : null}
 
+          {shouldShowSection("transactions") ? (
           <section className="panel">
             <h3>Transactions</h3>
             <div className="filter-row audit-filter-row">
@@ -1462,6 +1738,106 @@ export default function FamilyPage() {
               <button type="button" className="ghost" onClick={() => exportTransactionsReport("html")}>Open PDF View for CA</button>
             </div>
 
+            <div className="people-insights">
+              <div className="people-insights-head">
+                <h4>People-wise Clarity</h4>
+                <div className="people-insight-meta">
+                  <p>
+                    Full filtered view: <strong>{fullTxPeopleWise.totals.totalTransactions}</strong> transactions
+                  </p>
+                  <button type="button" className="ghost" onClick={() => setShowPeopleTrend((prev) => !prev)}>
+                    Trend {showPeopleTrend ? "On" : "Off"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="people-kpi-grid">
+                <article className="kpi-card people-kpi debit-bg">
+                  <p>Total Debit</p>
+                  <h3>{money.format(fullTxPeopleWise.totals.totalDebit)}</h3>
+                </article>
+                <article className="kpi-card people-kpi credit-bg">
+                  <p>Total Credit</p>
+                  <h3>{money.format(fullTxPeopleWise.totals.totalCredit)}</h3>
+                </article>
+                <article className={`kpi-card people-kpi ${fullTxPeopleWise.totals.totalNet >= 0 ? "net-positive" : "net-negative"}`}>
+                  <p>Net Position</p>
+                  <h3>{money.format(fullTxPeopleWise.totals.totalNet)}</h3>
+                </article>
+              </div>
+
+              <ul className="list people-compare-list">
+                {fullTxPeopleWise.members.map((member) => {
+                  const debitWidth = Math.max(6, (member.debitTotal / maxMemberFlow) * 100);
+                  const creditWidth = Math.max(6, (member.creditTotal / maxMemberFlow) * 100);
+                  const trendValues = trendValuesByUser.get(member.userId) ?? [];
+                  const maxTrendValue = Math.max(1, ...trendValues);
+                  const points =
+                    trendValues.length > 1
+                      ? trendValues
+                          .map((value, idx) => {
+                            const x = (idx / (trendValues.length - 1)) * 100;
+                            const y = 28 - (value / maxTrendValue) * 26;
+                            return `${x},${Math.max(1, Math.min(28, y))}`;
+                          })
+                          .join(" ")
+                      : "0,28 100,28";
+                  const previousDebit = previousDebitByUser.get(member.userId) ?? 0;
+                  const debitDelta = member.debitTotal - previousDebit;
+                  const deltaPct = previousDebit > 0 ? (debitDelta / previousDebit) * 100 : null;
+                  const trendClass =
+                    debitDelta > 0 ? "trend-up" : debitDelta < 0 ? "trend-down" : "trend-flat";
+
+                  return (
+                    <li key={member.userId}>
+                      <div className="list-main">
+                        <div className="people-title-row">
+                          <span>{member.userName}</span>
+                          <small>
+                            {member.transactionCount} txns · {member.flowSharePct.toFixed(1)}% flow
+                          </small>
+                        </div>
+                        <div className="people-flow-bars">
+                          <div className="people-sparkline-row">
+                            <small>6M Debit Trend</small>
+                            <svg className="people-sparkline" viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="Six month trend">
+                              <polyline points={points} className="sparkline-line" />
+                            </svg>
+                            <small className="sparkline-labels">{fullTxPeopleWise.trend.labels.join(" · ")}</small>
+                          </div>
+                          <div className="people-flow-item">
+                            <small>Debit</small>
+                            <div className="bar-track">
+                              <div className="bar-fill debit-flow" style={{ width: `${debitWidth}%` }} />
+                            </div>
+                          </div>
+                          <div className="people-flow-item">
+                            <small>Credit</small>
+                            <div className="bar-track">
+                              <div className="bar-fill credit-flow" style={{ width: `${creditWidth}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="people-values">
+                        <strong className="debit-text">-{money.format(member.debitTotal)}</strong>
+                        <strong className="credit-text">+{money.format(member.creditTotal)}</strong>
+                        <strong className={member.netTotal >= 0 ? "credit-text" : "debit-text"}>{money.format(member.netTotal)}</strong>
+                      </div>
+                      <small className="chip neutral">Spend Share {member.spendSharePct.toFixed(1)}%</small>
+                      {showPeopleTrend ? (
+                        <small className={`chip ${trendClass}`}>
+                          {previousPeriodLabel}: {debitDelta >= 0 ? "+" : ""}
+                          {money.format(debitDelta)}
+                          {deltaPct !== null ? ` (${debitDelta >= 0 ? "+" : ""}${deltaPct.toFixed(1)}%)` : ""}
+                        </small>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
             <ul className="list txn-list">
               {fullTxns.map((txn) => (
                 <li key={txn._id}>
@@ -1501,7 +1877,9 @@ export default function FamilyPage() {
               </button>
             </div>
           </section>
+          ) : null}
 
+          {shouldShowSection("ca-pack") ? (
           <section className="panel">
             <h3>Scheduled CA Pack</h3>
             <div className="filter-row audit-filter-row">
@@ -1576,6 +1954,7 @@ export default function FamilyPage() {
               </div>
             ) : null}
           </section>
+          ) : null}
         </>
       )}
     </main>
