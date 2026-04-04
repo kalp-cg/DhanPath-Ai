@@ -25,7 +25,7 @@ export type SubscriptionDoc = {
   currentPeriodEnd: Date;
   trialEndsAt?: Date | null;
   nextBillingAt?: Date | null;
-  billingProvider?: "none" | "razorpay";
+  billingProvider?: "none" | "razorpay" | "stripe";
   externalCustomerId?: string | null;
   externalSubscriptionId?: string | null;
   externalPaymentId?: string | null;
@@ -50,7 +50,7 @@ const subscriptionSchema = new Schema<SubscriptionDoc>(
     currentPeriodEnd: { type: Date, required: true },
     trialEndsAt: { type: Date, default: null },
     nextBillingAt: { type: Date, default: null },
-    billingProvider: { type: String, enum: ["none", "razorpay"], default: "none" },
+    billingProvider: { type: String, enum: ["none", "razorpay", "stripe"], default: "none" },
     externalCustomerId: { type: String, default: null },
     externalSubscriptionId: { type: String, default: null },
     externalPaymentId: { type: String, default: null },
