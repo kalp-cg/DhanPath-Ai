@@ -61,7 +61,7 @@ export default function CommandCenterPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<CommandCenterResponse | null>(null);
-  const [forbidden, setForbidden] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   const money = useMemo(
     () =>
@@ -74,7 +74,7 @@ export default function CommandCenterPage() {
   );
 
   const fetchCommandCenter = useCallback(async () => {
-    if (forbidden) return;
+    if (isAdmin === false) return;
     setLoading(true);
     setError(null);
 
@@ -84,7 +84,6 @@ export default function CommandCenterPage() {
 
       if (!res.ok) {
         if (res.status === 403) {
-          setForbidden(true);
           setError("Command Center is available only for family admins.");
         } else {
           setError(typeof payload?.error === "string" ? payload.error : "Failed to load command center.");
@@ -103,11 +102,56 @@ export default function CommandCenterPage() {
   }, []);
 
   useEffect(() => {
+    let canceled = false;
+
+    async function bootstrap() {
+      const now = new Date();
+      const params = new URLSearchParams({
+        year: String(now.getFullYear()),
+        month: String(now.getMonth() + 1),
+        memberId: "all",
+        page: "1",
+        pageSize: "1",
+      });
+
+      try {
+        const res = await fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" });
+        if (!res.ok) {
+          if (!canceled) {
+            setLoading(false);
+            setError("Unable to verify admin access for command center.");
+          }
+          return;
+        }
+        const summary = await res.json().catch(() => ({}));
+        const admin = Boolean(summary?.isCurrentUserAdmin);
+        if (!canceled) setIsAdmin(admin);
+      } catch {
+        if (!canceled) {
+          setLoading(false);
+          setError("Unable to verify admin access for command center.");
+        }
+      }
+    }
+
+    bootstrap();
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin === null) return;
+    if (isAdmin === false) {
+      setLoading(false);
+      setError("Command Center is available only for family admins.");
+      return;
+    }
+
     fetchCommandCenter();
-    if (forbidden) return;
     const interval = setInterval(fetchCommandCenter, 30000);
     return () => clearInterval(interval);
-  }, [fetchCommandCenter, forbidden]);
+  }, [fetchCommandCenter, isAdmin]);
 
   if (loading) {
     return (
