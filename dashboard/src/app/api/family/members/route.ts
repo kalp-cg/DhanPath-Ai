@@ -6,6 +6,7 @@ import { connectToMongo } from "@/lib/mongodb";
 import { Family } from "@/models/Family";
 import { User } from "@/models/User";
 import { writeAuditLog } from "@/server/audit-log";
+import { resolveFamilyAccess } from "@/server/family-access";
 
 type FamilyMember = {
   userId: unknown;
@@ -31,6 +32,14 @@ async function getFamilyContext(request: NextRequest) {
 
   await connectToMongo();
 
+  const access = await resolveFamilyAccess(auth.userId);
+  if (!access.ok) {
+    return { error: NextResponse.json({ error: access.error }, { status: access.status }) };
+  }
+  if (!access.isAdmin) {
+    return { error: NextResponse.json({ error: "admin access required" }, { status: 403 }) };
+  }
+
   const requester = await User.findById(auth.userId);
   if (!requester?.familyId) {
     return { error: NextResponse.json({ error: "no family found for user" }, { status: 404 }) };
@@ -42,10 +51,6 @@ async function getFamilyContext(request: NextRequest) {
   }
 
   const members = family.members as FamilyMember[];
-  const requesterMember = members.find((m) => String(m.userId) === String(requester._id));
-  if (!requesterMember || requesterMember.role !== "admin") {
-    return { error: NextResponse.json({ error: "admin access required" }, { status: 403 }) };
-  }
 
   return { requester, family, members };
 }

@@ -48,6 +48,12 @@ type CommandCenterResponse = {
   }>;
   weeklySeries: Array<{ label: string; spend: number; income: number }>;
   alerts: Array<{ id: string; severity: "info" | "warning" | "critical"; title: string; detail: string }>;
+  executive: {
+    score: number;
+    tier: "elite" | "strong" | "needs_attention" | "at_risk";
+    headline: string;
+    playbook: string[];
+  };
   generatedAt: string;
 };
 
@@ -99,7 +105,7 @@ export default function CommandCenterPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     let canceled = false;
@@ -190,12 +196,20 @@ export default function CommandCenterPage() {
   return (
     <div className="stack animate-slide">
       <section className="command-hero panel">
-        <div>
+        <div style={{ flex: 1 }}>
           <p className="command-kicker">Founder Dashboard</p>
           <h2 className="command-title">Command Center</h2>
           <p className="command-subtitle">
             Real-time family finance pulse for {data.family.name}. Last updated {new Date(data.generatedAt).toLocaleString()}.
           </p>
+          <p className="command-exec-headline">{data.executive.headline}</p>
+        </div>
+        <div className="command-score">
+          <div className="command-score-ring" style={{ ["--score" as string]: String(data.executive.score) }}>
+            <strong>{data.executive.score}</strong>
+            <span>/ 100</span>
+          </div>
+          <span className={`chip command-tier command-tier--${data.executive.tier}`}>{data.executive.tier.replace("_", " ")}</span>
         </div>
         <div className="command-hero-meta">
           <span className="chip chip--brand">{data.billing.planName}</span>
@@ -203,6 +217,23 @@ export default function CommandCenterPage() {
           <span className="chip chip--warning">Quota {data.billing.usagePct}%</span>
         </div>
       </section>
+
+      {data.executive.playbook.length > 0 && (
+        <section className="panel">
+          <div className="panel-header">
+            <h3 className="panel-title">Founder Playbook</h3>
+            <span className="panel-subtitle">Priority Actions</span>
+          </div>
+          <ol className="command-playbook">
+            {data.executive.playbook.map((item, idx) => (
+              <li key={`${idx}-${item}`}>
+                <span className="command-playbook-index">{idx + 1}</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <div className="kpi-grid">
         <KPICard icon="spend" label="Spend (30d)" value={money.format(data.metrics.spend30)} variant="danger" />

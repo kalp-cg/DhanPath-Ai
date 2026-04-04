@@ -38,7 +38,6 @@ type Pagination = {
 };
 
 export default function TransactionsPage() {
-  const now = new Date();
   const [txns, setTxns] = useState<FullTransaction[]>([]);
   const [peopleWise, setPeopleWise] = useState<PeopleWiseInsight[]>([]);
   const [totals, setTotals] = useState({ totalDebit: 0, totalCredit: 0, totalNet: 0, totalTransactions: 0 });

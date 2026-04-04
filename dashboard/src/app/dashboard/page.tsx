@@ -86,7 +86,7 @@ export default function OverviewPage() {
   const analytics = useMemo(() => {
     if (!summary) return { projected: 0, avg: 0, topSpender: null as string | null };
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-    const observedDays = Math.max(1, now.getDate());
+    const observedDays = Math.max(1, new Date().getDate());
     const projected = (summary.totalMonthlySpend / observedDays) * daysInMonth;
     const timeline = summary.monthlyTimeline ?? [];
     const totalYearSpend = timeline.reduce((sum, m) => sum + m.amount, 0);
@@ -95,7 +95,7 @@ export default function OverviewPage() {
     const sorted = [...(summary.memberBreakdown ?? [])].sort((a, b) => b.monthlySpend - a.monthlySpend);
     const topSpender = sorted[0]?.name ?? null;
     return { projected, avg, topSpender };
-  }, [summary, selectedYear, selectedMonth, now]);
+  }, [summary, selectedYear, selectedMonth]);
 
   if (loading) {
     return (

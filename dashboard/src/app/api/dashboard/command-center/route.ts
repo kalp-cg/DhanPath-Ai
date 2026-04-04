@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
-import { Family } from "@/models/Family";
 import { Transaction } from "@/models/Transaction";
 import { Types } from "mongoose";
 
@@ -32,6 +31,10 @@ function pct(numerator: number, denominator: number): number {
   return Number(((numerator / denominator) * 100).toFixed(2));
 }
 
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 export async function GET(request: NextRequest) {
   const auth = getAuthUserFromRequest(request);
   if (!auth) {
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const { user, family, members } = access;
+  const { family, members } = access;
 
   const names = new Map<string, string>();
   for (const member of members) {
@@ -306,6 +309,43 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  let score = 76;
+  score += usagePct < 60 ? 8 : usagePct < 80 ? 2 : -10;
+  score += freshnessHours !== null && freshnessHours <= 24 ? 8 : freshnessHours !== null && freshnessHours <= 48 ? 3 : -10;
+  score += anomalyCount === 0 ? 6 : anomalyCount <= 2 ? 1 : -8;
+  score += spendGrowthPct <= 10 ? 6 : spendGrowthPct <= 25 ? 1 : -6;
+  score += pct(activeMembers, Math.max(1, members.length)) >= 70 ? 6 : -4;
+  score += pct(automatedCount, Math.max(1, tx30.length)) >= 60 ? 6 : -5;
+
+  const executiveScore = clampScore(score);
+  const executiveTier =
+    executiveScore >= 90
+      ? "elite"
+      : executiveScore >= 80
+        ? "strong"
+        : executiveScore >= 65
+          ? "needs_attention"
+          : "at_risk";
+
+  const topActions = alerts
+    .filter((alert) => alert.id !== "healthy")
+    .slice(0, 3)
+    .map((alert) => {
+      if (alert.id.startsWith("usage")) {
+        return "Upgrade or optimize sync volume before transaction quota reaches critical levels.";
+      }
+      if (alert.id === "spend-spike") {
+        return "Enable a weekly spending review and set hard caps on the top two categories.";
+      }
+      if (alert.id === "member-concentration") {
+        return "Distribute spending accountability by assigning category owners to each family member.";
+      }
+      if (alert.id === "sync-stale") {
+        return "Trigger a mobile sync check and verify SMS permissions on primary devices.";
+      }
+      return "Review this signal in detail and assign a specific owner for follow-through.";
+    });
+
   return NextResponse.json({
     family: {
       id: String(family._id),
@@ -342,6 +382,19 @@ export async function GET(request: NextRequest) {
     memberStats30: memberStats,
     weeklySeries,
     alerts,
+    executive: {
+      score: executiveScore,
+      tier: executiveTier,
+      headline:
+        executiveTier === "elite"
+          ? "Execution quality is elite. This family system is running like a disciplined finance machine."
+          : executiveTier === "strong"
+            ? "Execution quality is strong with a few optimization levers remaining."
+            : executiveTier === "needs_attention"
+              ? "Performance is solid but several risk signals need immediate owner-level action."
+              : "Risk levels are elevated. Act on the playbook now to stabilize finance operations.",
+      playbook: topActions,
+    },
     generatedAt: now,
   });
 }
