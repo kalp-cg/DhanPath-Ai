@@ -5,6 +5,7 @@ import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { Transaction } from "@/models/Transaction";
 import { User } from "@/models/User";
+import { getOrCreateSubscription, getUsageSnapshot } from "@/server/billing-service";
 
 export async function GET(request: NextRequest) {
   const auth = getAuthUserFromRequest(request);
@@ -61,6 +62,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "user must join or create family first" }, { status: 409 });
   }
 
+  const subscription = await getOrCreateSubscription({ familyId: user.familyId, ownerUserId: user._id });
+  const usage = await getUsageSnapshot({ familyId: user.familyId, monthlyTxnLimit: subscription.monthlyTxnLimit });
+
   const normalizeType = (inputType?: string): "debit" | "credit" => {
     if (!inputType) return "debit";
     const value = inputType.toLowerCase();
@@ -102,7 +106,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "transactions array is empty or invalid" }, { status: 400 });
     }
 
-    const ops = incoming.map((item) => ({
+    if (usage.remaining <= 0) {
+      return NextResponse.json(
+        {
+          error: "monthly transaction limit reached for current plan",
+          usage,
+        },
+        { status: 402 },
+      );
+    }
+
+    const allowedIncoming = incoming.slice(0, usage.remaining);
+
+    const ops = allowedIncoming.map((item) => ({
       updateOne: {
         filter: {
           familyId: user.familyId,
@@ -129,13 +145,15 @@ export async function POST(request: NextRequest) {
 
     const result = await Transaction.bulkWrite(ops, { ordered: false });
     const synced = result.upsertedCount ?? 0;
-    const total = incoming.length;
+    const total = allowedIncoming.length;
 
     return NextResponse.json(
       {
         synced,
         total,
         duplicates: total - synced,
+        truncated: allowedIncoming.length < incoming.length,
+        skipped: Math.max(0, incoming.length - allowedIncoming.length),
       },
       { status: 200 },
     );
@@ -143,6 +161,16 @@ export async function POST(request: NextRequest) {
 
   if (!body || !Number.isFinite(body.amount)) {
     return NextResponse.json({ error: "amount is required" }, { status: 400 });
+  }
+
+  if (usage.remaining <= 0) {
+    return NextResponse.json(
+      {
+        error: "monthly transaction limit reached for current plan",
+        usage,
+      },
+      { status: 402 },
+    );
   }
 
   const tx = await Transaction.create({

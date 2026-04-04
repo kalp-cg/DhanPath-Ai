@@ -4,6 +4,7 @@ import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { Family } from "@/models/Family";
 import { User } from "@/models/User";
+import { getOrCreateSubscription } from "@/server/billing-service";
 
 export async function POST(request: NextRequest) {
   const auth = getAuthUserFromRequest(request);
@@ -39,6 +40,24 @@ export async function POST(request: NextRequest) {
   const alreadyMember = family.members.some(
     (m: { userId: unknown }) => String(m.userId) === String(user._id),
   );
+
+  if (!alreadyMember) {
+    const subscription = await getOrCreateSubscription({ familyId: family._id, ownerUserId: family.ownerUserId });
+    if (family.members.length >= subscription.maxMembers) {
+      return NextResponse.json(
+        {
+          error: "family member limit reached for current plan",
+          code: "SEAT_LIMIT_REACHED",
+          details: {
+            maxMembers: subscription.maxMembers,
+            currentMembers: family.members.length,
+          },
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   if (!alreadyMember) {
     family.members.push({ userId: user._id, email: user.email, role: "member" });
     await family.save();

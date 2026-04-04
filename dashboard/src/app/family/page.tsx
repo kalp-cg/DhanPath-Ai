@@ -24,6 +24,35 @@ type Summary = {
     transactionCount: number;
   }>;
   selectedMemberId: string;
+  billing: {
+    planId: string;
+    planName: string;
+    status: string;
+    monthlyPriceInr: number;
+    maxMembers: number;
+    membersUsed: number;
+    membersRemaining: number;
+    trial: {
+      trialEndsAt: string;
+      trialDaysLeft: number;
+      nextBillingAt: string;
+    };
+    usage: {
+      used: number;
+      monthlyTxnLimit: number;
+      remaining: number;
+      periodStart: string;
+      periodEnd: string;
+    };
+    timeline: Array<{
+      at: string;
+      kind: "created" | "plan_changed" | "renewed";
+      fromPlanId: string | null;
+      toPlanId: string;
+      amountInr: number;
+      note?: string;
+    }>;
+  };
   pagination: {
     page: number;
     pageSize: number;
@@ -77,23 +106,10 @@ export default function FamilyPage() {
   );
 
   const analytics = useMemo(() => {
-    if (!summary) {
-      return {
-        maxMemberSpend: 1,
-        maxCategorySpend: 1,
-        maxMonthSpend: 1,
-        maxYearSpend: 1,
-        totalYearSpend: 0,
-        avgMonthlySpend: 0,
-        projectedMonthEnd: 0,
-        topSpender: null as { userId: string; name: string; role: string; monthlySpend: number } | null,
-      };
-    }
-
-    const memberBreakdown = Array.isArray(summary.memberBreakdown) ? summary.memberBreakdown : [];
-    const topCategories = Array.isArray(summary.topCategories) ? summary.topCategories : [];
-    const monthlyTimeline = Array.isArray(summary.monthlyTimeline) ? summary.monthlyTimeline : [];
-    const yearlyTotals = Array.isArray(summary.yearlyTotals) ? summary.yearlyTotals : [];
+    const memberBreakdown = summary?.memberBreakdown ?? [];
+    const topCategories = summary?.topCategories ?? [];
+    const monthlyTimeline = summary?.monthlyTimeline ?? [];
+    const yearlyTotals = summary?.yearlyTotals ?? [];
 
     const maxMemberSpend = Math.max(1, ...memberBreakdown.map((m) => m.monthlySpend));
     const maxCategorySpend = Math.max(1, ...topCategories.map((c) => c.amount));
@@ -106,7 +122,8 @@ export default function FamilyPage() {
 
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
     const observedDays = Math.max(1, new Date().getDate());
-    const projectedMonthEnd = (summary.totalMonthlySpend / observedDays) * daysInMonth;
+    const totalMonthlySpend = summary?.totalMonthlySpend ?? 0;
+    const projectedMonthEnd = (totalMonthlySpend / observedDays) * daysInMonth;
 
     const topSpender =
       memberBreakdown.length > 0
@@ -118,7 +135,6 @@ export default function FamilyPage() {
       maxCategorySpend,
       maxMonthSpend,
       maxYearSpend,
-      totalYearSpend,
       avgMonthlySpend,
       projectedMonthEnd,
       topSpender,
@@ -134,7 +150,7 @@ export default function FamilyPage() {
     }
     setUser(data.user);
     return data.user as User;
-  }, [router, setUser]);
+  }, [router]);
 
   const fetchSummary = useCallback(async () => {
     const params = new URLSearchParams({
@@ -144,16 +160,18 @@ export default function FamilyPage() {
       page: String(page),
       pageSize: "10",
     });
+
     const res = await fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" });
     if (!res.ok) {
       setSummary(null);
       return;
     }
-    const data = await res.json();
+
+    const data = await res.json().catch(() => ({}));
     const normalized: Summary = {
-      familyId: data.familyId ?? "",
-      familyName: data.familyName ?? "Family",
-      inviteCode: data.inviteCode ?? "-",
+      familyId: String(data.familyId ?? ""),
+      familyName: String(data.familyName ?? "Family"),
+      inviteCode: String(data.inviteCode ?? "-"),
       selectedYear: Number(data.selectedYear ?? selectedYear),
       selectedMonth: Number(data.selectedMonth ?? selectedMonth),
       availableYears: Array.isArray(data.availableYears) ? data.availableYears : [selectedYear],
@@ -164,6 +182,68 @@ export default function FamilyPage() {
       yearlyTotals: Array.isArray(data.yearlyTotals) ? data.yearlyTotals : [],
       memberTransactionStats: Array.isArray(data.memberTransactionStats) ? data.memberTransactionStats : [],
       selectedMemberId: typeof data.selectedMemberId === "string" ? data.selectedMemberId : "all",
+      billing:
+        data.billing && typeof data.billing === "object"
+          ? {
+              planId: String(data.billing.planId ?? "free"),
+              planName: String(data.billing.planName ?? "Free"),
+              status: String(data.billing.status ?? "active"),
+              monthlyPriceInr: Number(data.billing.monthlyPriceInr ?? 0),
+              maxMembers: Number(data.billing.maxMembers ?? 4),
+              membersUsed: Number(data.billing.membersUsed ?? 1),
+              membersRemaining: Number(data.billing.membersRemaining ?? 0),
+              trial:
+                data.billing.trial && typeof data.billing.trial === "object"
+                  ? {
+                      trialEndsAt: String(data.billing.trial.trialEndsAt ?? ""),
+                      trialDaysLeft: Number(data.billing.trial.trialDaysLeft ?? 0),
+                      nextBillingAt: String(data.billing.trial.nextBillingAt ?? ""),
+                    }
+                  : {
+                      trialEndsAt: "",
+                      trialDaysLeft: 0,
+                      nextBillingAt: "",
+                    },
+              usage:
+                data.billing.usage && typeof data.billing.usage === "object"
+                  ? {
+                      used: Number(data.billing.usage.used ?? 0),
+                      monthlyTxnLimit: Number(data.billing.usage.monthlyTxnLimit ?? 200),
+                      remaining: Number(data.billing.usage.remaining ?? 0),
+                      periodStart: String(data.billing.usage.periodStart ?? ""),
+                      periodEnd: String(data.billing.usage.periodEnd ?? ""),
+                    }
+                  : {
+                      used: 0,
+                      monthlyTxnLimit: 200,
+                      remaining: 200,
+                      periodStart: "",
+                      periodEnd: "",
+                    },
+              timeline: Array.isArray(data.billing.timeline) ? data.billing.timeline : [],
+            }
+          : {
+              planId: "free",
+              planName: "Free",
+              status: "active",
+              monthlyPriceInr: 0,
+              maxMembers: 4,
+              membersUsed: 1,
+              membersRemaining: 3,
+              trial: {
+                trialEndsAt: "",
+                trialDaysLeft: 0,
+                nextBillingAt: "",
+              },
+              usage: {
+                used: 0,
+                monthlyTxnLimit: 200,
+                remaining: 200,
+                periodStart: "",
+                periodEnd: "",
+              },
+              timeline: [],
+            },
       pagination:
         data.pagination && typeof data.pagination === "object"
           ? {
@@ -184,8 +264,9 @@ export default function FamilyPage() {
             },
       recentTransactions: Array.isArray(data.recentTransactions) ? data.recentTransactions : [],
     };
+
     setSummary(normalized);
-  }, [page, selectedMemberId, selectedYear, selectedMonth, setSummary]);
+  }, [page, selectedMemberId, selectedYear, selectedMonth]);
 
   useEffect(() => {
     let mounted = true;
@@ -287,6 +368,21 @@ export default function FamilyPage() {
     } catch {
       setError("could not copy invite code");
     }
+  }
+
+  async function upgradePlan(planId: "pro" | "family_pro") {
+    const res = await fetch("/api/billing/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? "could not change plan");
+      return;
+    }
+    setError(null);
+    await fetchSummary();
   }
 
   const storyText = useMemo(() => {
@@ -394,6 +490,26 @@ export default function FamilyPage() {
                 <h3>{analytics.topSpender?.name ?? "-"}</h3>
               </article>
             </div>
+
+            <div className="billing-strip">
+              <p>
+                Plan: <strong>{summary?.billing.planName ?? "Free"}</strong> · Usage: <strong>{summary?.billing.usage.used ?? 0}</strong>
+                /{summary?.billing.usage.monthlyTxnLimit ?? 0} txns this month
+              </p>
+              <p>
+                Seats: <strong>{summary?.billing.membersUsed ?? 0}</strong>/{summary?.billing.maxMembers ?? 0} · Next billing:{" "}
+                <strong>
+                  {summary?.billing.trial.nextBillingAt
+                    ? new Date(summary.billing.trial.nextBillingAt).toLocaleDateString()
+                    : "-"}
+                </strong>
+                {summary?.billing.status === "trialing" ? ` · Trial ${summary.billing.trial.trialDaysLeft} days left` : ""}
+              </p>
+              <div className="billing-actions">
+                <button className="ghost" type="button" onClick={() => upgradePlan("pro")}>Upgrade to Pro</button>
+                <button className="ghost" type="button" onClick={() => upgradePlan("family_pro")}>Upgrade to Family Pro</button>
+              </div>
+            </div>
           </section>
 
           <section className="panel filter-panel">
@@ -455,7 +571,7 @@ export default function FamilyPage() {
             <div>
               <h3>People-wise Payment Split</h3>
               <ul className="list">
-                {summary?.memberBreakdown?.map((m) => (
+                {(summary?.memberBreakdown ?? []).map((m) => (
                   <li key={m.userId}>
                     <div className="list-main">
                       <span>
@@ -470,14 +586,14 @@ export default function FamilyPage() {
                     </div>
                     <strong>{money.format(m.monthlySpend)}</strong>
                   </li>
-                )) ?? <li>No members yet.</li>}
+                ))}
               </ul>
             </div>
 
             <div>
               <h3>Top Categories ({monthTitle})</h3>
               <ul className="list">
-                {summary?.topCategories?.map((c) => (
+                {(summary?.topCategories ?? []).map((c) => (
                   <li key={c.category}>
                     <div className="list-main">
                       <span>{c.category}</span>
@@ -490,7 +606,7 @@ export default function FamilyPage() {
                     </div>
                     <strong>{money.format(c.amount)}</strong>
                   </li>
-                )) ?? <li>No spending yet.</li>}
+                ))}
               </ul>
             </div>
           </section>
@@ -540,7 +656,7 @@ export default function FamilyPage() {
             <div>
               <h3>Month-wise Spend ({selectedYear})</h3>
               <ul className="list">
-                {summary?.monthlyTimeline?.map((m) => (
+                {(summary?.monthlyTimeline ?? []).map((m) => (
                   <li key={m.month}>
                     <div className="list-main">
                       <span>{m.label}</span>
@@ -553,14 +669,14 @@ export default function FamilyPage() {
                     </div>
                     <strong>{money.format(m.amount)}</strong>
                   </li>
-                )) ?? <li>No monthly data yet.</li>}
+                ))}
               </ul>
             </div>
 
             <div>
               <h3>Year-wise Spend</h3>
               <ul className="list">
-                {summary?.yearlyTotals?.map((y) => (
+                {(summary?.yearlyTotals ?? []).map((y) => (
                   <li key={y.year}>
                     <div className="list-main">
                       <span>{y.year}</span>
@@ -573,7 +689,7 @@ export default function FamilyPage() {
                     </div>
                     <strong>{money.format(y.amount)}</strong>
                   </li>
-                )) ?? <li>No yearly data yet.</li>}
+                ))}
               </ul>
             </div>
           </section>
@@ -589,11 +705,29 @@ export default function FamilyPage() {
           </section>
 
           <section className="panel">
+            <h3>Billing Timeline</h3>
+            <ul className="list">
+              {(summary?.billing.timeline ?? []).map((event) => (
+                <li key={`${event.kind}-${event.at}-${event.toPlanId}`}>
+                  <div className="list-main">
+                    <span>
+                      {event.kind.replace("_", " ")} · {event.fromPlanId ? `${event.fromPlanId} -> ` : ""}{event.toPlanId}
+                    </span>
+                    <small>{new Date(event.at).toLocaleString()}</small>
+                    {event.note ? <small>{event.note}</small> : null}
+                  </div>
+                  <strong>{money.format(event.amountInr)}</strong>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="panel">
             <h3>
               Transactions for {monthTitle} {selectedYear}
             </h3>
             <ul className="list txn-list">
-              {summary?.recentTransactions?.map((t) => (
+              {(summary?.recentTransactions ?? []).map((t) => (
                 <li key={t.id}>
                   <div className="list-main">
                     <span>
@@ -606,7 +740,7 @@ export default function FamilyPage() {
                   </div>
                   <strong>{money.format(Number(t.amount))}</strong>
                 </li>
-              )) ?? <li>No transactions yet.</li>}
+              ))}
             </ul>
 
             <div className="pager">
@@ -619,8 +753,7 @@ export default function FamilyPage() {
                 Previous
               </button>
               <span>
-                Page {summary?.pagination?.page ?? 1} of {summary?.pagination?.totalPages ?? 1} · Total{" "}
-                {summary?.pagination?.totalTransactions ?? 0}
+                Page {summary?.pagination?.page ?? 1} of {summary?.pagination?.totalPages ?? 1} · Total {summary?.pagination?.totalTransactions ?? 0}
               </span>
               <button
                 type="button"
