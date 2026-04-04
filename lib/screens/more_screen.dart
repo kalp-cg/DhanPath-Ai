@@ -13,6 +13,7 @@ import 'budget_suggest_screen.dart';
 import 'weekly_digest_screen.dart';
 import 'savings_goals_screen.dart';
 import 'recurring_bills_screen.dart';
+import 'money_twin_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -88,6 +89,16 @@ class MoreScreen extends StatelessWidget {
             isDark: isDark,
             cs: cs,
             onTap: () => _navigate(context, const WeeklyDigestScreen()),
+          ),
+          _buildTile(
+            context,
+            icon: Icons.psychology_alt_rounded,
+            label: 'Money Twin Simulator',
+            subtitle: 'Run shock scenarios and see your cash runway',
+            color: const Color(0xFFD35400),
+            isDark: isDark,
+            cs: cs,
+            onTap: () => _navigate(context, const MoneyTwinScreen()),
           ),
 
           const SizedBox(height: 20),
