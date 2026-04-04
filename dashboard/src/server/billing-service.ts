@@ -9,6 +9,8 @@ export type PlanDef = {
   monthlyTxnLimit: number;
   maxMembers: number;
   monthlyPriceInr: number;
+  billingProvider: "none" | "razorpay";
+  isPaid: boolean;
   features: string[];
 };
 
@@ -19,6 +21,8 @@ export const PLAN_DEFS: PlanDef[] = [
     monthlyTxnLimit: 200,
     maxMembers: 4,
     monthlyPriceInr: 0,
+    billingProvider: "none",
+    isPaid: false,
     features: ["Family workspace", "Basic analytics", "Manual + phone sync"],
   },
   {
@@ -27,6 +31,8 @@ export const PLAN_DEFS: PlanDef[] = [
     monthlyTxnLimit: 2000,
     maxMembers: 8,
     monthlyPriceInr: 299,
+    billingProvider: "razorpay",
+    isPaid: true,
     features: ["Advanced analytics", "Priority sync", "Extended history"],
   },
   {
@@ -35,6 +41,8 @@ export const PLAN_DEFS: PlanDef[] = [
     monthlyTxnLimit: 10000,
     maxMembers: 20,
     monthlyPriceInr: 699,
+    billingProvider: "razorpay",
+    isPaid: true,
     features: ["All Pro features", "Large family usage", "Premium support"],
   },
 ];
@@ -69,6 +77,12 @@ export async function getOrCreateSubscription(params: {
       currentPeriodEnd: end,
       trialEndsAt,
       nextBillingAt: end,
+      billingProvider: "none",
+      externalCustomerId: null,
+      externalSubscriptionId: null,
+      externalPaymentId: null,
+      lastPaymentAt: null,
+      lastPaymentStatus: "none",
       billingEvents: [
         {
           at: now,
@@ -87,6 +101,14 @@ export async function getOrCreateSubscription(params: {
   if (!sub.maxMembers || sub.maxMembers < 1) {
     const plan = getPlan(sub.planId);
     sub.maxMembers = plan.maxMembers;
+  }
+
+  if (!sub.billingProvider) {
+    sub.billingProvider = sub.planId === "free" ? "none" : "razorpay";
+  }
+
+  if (!sub.lastPaymentStatus) {
+    sub.lastPaymentStatus = sub.planId === "free" ? "none" : "paid";
   }
 
   if (sub.status === "trialing" && sub.trialEndsAt && sub.trialEndsAt <= now) {
@@ -157,4 +179,8 @@ export function getTrialMeta(sub: {
     trialDaysLeft,
     nextBillingAt,
   };
+}
+
+export function isRazorpayConfigured() {
+  return Boolean(process.env.RAZORPAY_KEY_ID?.trim() && process.env.RAZORPAY_KEY_SECRET?.trim());
 }

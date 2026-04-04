@@ -656,6 +656,12 @@ export default function FamilyPage() {
       setError(data.error ?? "could not change plan");
       return;
     }
+
+    if (data.requiresPayment && typeof data.checkoutUrl === "string" && data.checkoutUrl.length > 0) {
+      window.location.href = data.checkoutUrl;
+      return;
+    }
+
     setError(null);
     await fetchSummary();
   }

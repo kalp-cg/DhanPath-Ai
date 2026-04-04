@@ -4,6 +4,7 @@ import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { Family } from "@/models/Family";
 import { User } from "@/models/User";
+import { getRazorpayPublicConfig } from "@/server/razorpay";
 import { getOrCreateSubscription, getPlan, getTrialMeta, getUsageSnapshot } from "@/server/billing-service";
 
 export async function GET(request: NextRequest) {
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
   const subscription = await getOrCreateSubscription({ familyId: user.familyId, ownerUserId: user._id });
   const usage = await getUsageSnapshot({ familyId: user.familyId, monthlyTxnLimit: subscription.monthlyTxnLimit });
   const plan = getPlan(subscription.planId);
+  const pendingPlan = subscription.pendingPlanId ? getPlan(subscription.pendingPlanId) : null;
   const trial = getTrialMeta(subscription);
   const timeline = [...(subscription.billingEvents ?? [])]
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
@@ -43,7 +45,9 @@ export async function GET(request: NextRequest) {
     {
       subscription: {
         planId: subscription.planId,
+        pendingPlanId: subscription.pendingPlanId ?? null,
         planName: plan.name,
+        pendingPlanName: pendingPlan?.name ?? null,
         status: subscription.status,
         monthlyPriceInr: plan.monthlyPriceInr,
         monthlyTxnLimit: subscription.monthlyTxnLimit,
@@ -51,6 +55,13 @@ export async function GET(request: NextRequest) {
         membersUsed: family.members.length,
         membersRemaining: Math.max(0, subscription.maxMembers - family.members.length),
         trial,
+        payment: {
+          provider: subscription.billingProvider ?? "none",
+          lastPaymentStatus: subscription.lastPaymentStatus ?? "none",
+          externalPaymentId: subscription.externalPaymentId ?? null,
+          lastPaymentAt: subscription.lastPaymentAt ?? null,
+          razorpay: getRazorpayPublicConfig(),
+        },
         usage,
         timeline,
       },

@@ -17,6 +17,7 @@ export type SubscriptionDoc = {
   familyId: Types.ObjectId;
   ownerUserId: Types.ObjectId;
   planId: "free" | "pro" | "family_pro";
+  pendingPlanId?: "free" | "pro" | "family_pro" | null;
   status: SubscriptionStatus;
   monthlyTxnLimit: number;
   maxMembers: number;
@@ -24,6 +25,12 @@ export type SubscriptionDoc = {
   currentPeriodEnd: Date;
   trialEndsAt?: Date | null;
   nextBillingAt?: Date | null;
+  billingProvider?: "none" | "razorpay";
+  externalCustomerId?: string | null;
+  externalSubscriptionId?: string | null;
+  externalPaymentId?: string | null;
+  lastPaymentAt?: Date | null;
+  lastPaymentStatus?: "none" | "pending" | "paid" | "failed";
   billingEvents: BillingEvent[];
   canceledAt?: Date | null;
   createdAt: Date;
@@ -35,6 +42,7 @@ const subscriptionSchema = new Schema<SubscriptionDoc>(
     familyId: { type: Schema.Types.ObjectId, ref: "Family", required: true, unique: true, index: true },
     ownerUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     planId: { type: String, enum: ["free", "pro", "family_pro"], default: "free", required: true },
+    pendingPlanId: { type: String, enum: ["free", "pro", "family_pro"], default: null },
     status: { type: String, enum: ["active", "trialing", "past_due", "canceled"], default: "active", required: true },
     monthlyTxnLimit: { type: Number, required: true, default: 200 },
     maxMembers: { type: Number, required: true, default: 4 },
@@ -42,6 +50,12 @@ const subscriptionSchema = new Schema<SubscriptionDoc>(
     currentPeriodEnd: { type: Date, required: true },
     trialEndsAt: { type: Date, default: null },
     nextBillingAt: { type: Date, default: null },
+    billingProvider: { type: String, enum: ["none", "razorpay"], default: "none" },
+    externalCustomerId: { type: String, default: null },
+    externalSubscriptionId: { type: String, default: null },
+    externalPaymentId: { type: String, default: null },
+    lastPaymentAt: { type: Date, default: null },
+    lastPaymentStatus: { type: String, enum: ["none", "pending", "paid", "failed"], default: "none" },
     billingEvents: [
       {
         at: { type: Date, required: true, default: Date.now },
