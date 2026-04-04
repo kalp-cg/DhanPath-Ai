@@ -1,217 +1,245 @@
 # DhanPath AI
 
-DhanPath AI is a full-stack personal and family finance platform built as a monorepo:
+<p align="center">
+  <img src="assets/icon/app_icon.png" alt="DhanPath AI Logo" width="132" />
+</p>
 
-- A Flutter mobile app for SMS-first expense tracking and on-device finance workflows.
-- A Next.js dashboard for family-level analytics, billing, audit logs, CA pack generation, and founder-grade command center operations.
+<p align="center">
+  <a href="PASTE_YOUR_YOUTUBE_DEMO_LINK_HERE">
+    <img src="https://img.shields.io/badge/YouTube-Demo%20Video-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Demo Video" />
+  </a>
+</p>
 
-The product vision is simple: convert raw transaction data into clear decisions, then into measurable action plans.
+<p align="center">
+  <strong>Watch the complete product walkthrough:</strong><br/>
+  <a href="PASTE_YOUR_YOUTUBE_DEMO_LINK_HERE">Demo Video of Whole Product</a>
+</p>
 
-## Highlights
+Premium AI-powered family finance product for hackathons and real-world operations.
 
-- Offline-first mobile expense tracking with SMS parsing and manual entries.
-- Family workspace dashboard with role-based access and invite flow.
-- Command Center with executive score, risk alerts, What-If Lab, and one-click plan application.
-- Budget and Goals pages linked to applied action plans.
-- Billing plans, subscription usage tracking, and invoice export.
-- Audit log APIs and exports for accountability.
-- CA Pack generation flow for shareable monthly reporting.
+- Mobile app: offline-first capture, SMS parsing, SQLite reliability.
+- Dashboard: command center, analytics, billing, governance, and CA-ready exports.
+- Sync bridge: one-way mobile to cloud flow for stable demo delivery.
+
+## Hackathon Priority Highlights
+
+### 1. Payment Gateway + Subscription Flow
+- Dual payment readiness with Stripe and Razorpay wiring.
+- Plan-based subscription model with provider metadata and usage tracking.
+- Billing history export for operational and investor review.
+
+### 2. SMS Parsing Engine (Core Innovation)
+- Bank SMS parser pipeline with transaction extraction and categorization.
+- Duplicate detection for repeated bank notifications.
+- Offline-first persistence so data survives weak/no network.
+
+### 3. Verified Webhooks for Billing Automation
+- Dedicated webhook endpoint for payment event ingestion.
+- Signature validation before state mutation.
+- Automated subscription updates after successful payment events.
+
+### 4. Demo-Stable Architecture
+- MongoDB-backed dashboard APIs with JWT auth cookies.
+- One-way sync from mobile local data to dashboard family ledger.
+- Scope locked for reliability-first hackathon demonstration.
+
+## Product Feature Catalog
+
+### Authentication and Access
+- Unified login and signup flow.
+- JWT session auth with HTTP-only cookie strategy.
+- Family create/join workflow with invite-code onboarding.
+
+### Family Workspace and Roles
+- Family-level data visibility with role-sensitive actions.
+- Member management (role change, remove member).
+- Invite sharing and household onboarding support.
+
+### Financial Operations
+- Manual + imported transaction ledger support.
+- Category and member-level drill-down.
+- Monthly report endpoints and export pathways.
+
+### Command Center (Founder/Admin Mode)
+- Executive score and performance tier.
+- Risk radar and operational health surfaces.
+- What-If Lab to simulate savings strategies.
+- One-click Apply Plan to Family action.
+
+### Budget and Goals Intelligence
+- Budget utilization with pressure-point visibility.
+- Goal progress board with ETA logic.
+- Automatic linkage to active action plans.
+
+### Billing, Invoices, and Governance
+- Subscription read model with provider and timeline state.
+- Billing event history and CSV export.
+- Audit trail for critical family and admin operations.
+
+### CA Pack and Compliance Workflows
+- CA schedule setup with include-audit option.
+- Monthly pack generation and tokenized sharing.
+- CSV/PDF retrieval for accountant-ready handoff.
+
+## Product Areas by Surface
+
+### Mobile App (Flutter)
+- Offline transaction store (SQLite).
+- SMS ingestion and parser-based extraction.
+- Financial views and quick insights for daily use.
+- Cloud sync trigger for dashboard visibility.
+
+### Web Dashboard (Next.js)
+- Landing and auth experience.
+- Overview, transactions, analytics, insights, members, audit.
+- Billing and CA pack operations.
+- Command center for strategy-to-execution loops.
 
 ## Monorepo Structure
 
 ```text
-DhanPathAi/
-  lib/                    Flutter app source
-  test/                   Flutter tests
-  dashboard/              Next.js dashboard (frontend + APIs)
-  docs/                   Planning and architecture docs
-  android/ ios/ web/ ...  Flutter platform folders
+DhanPath-Ai/
+  lib/                    Flutter mobile app source
+  test/                   Flutter test suite
+  dashboard/              Next.js dashboard + API routes
+  docs/                   Hackathon and product docs
+  assets/                 Icons and static media
+  android/ ios/ web/ ...  Platform targets
 ```
 
 ## Tech Stack
 
-### Mobile App
-
+### Mobile
 - Flutter / Dart
-- Provider
-- SQLite (`sqflite`)
-- Telephony SMS parsing
-- Local auth + secure storage
-- Notifications and reporting/export utilities
+- SQLite (sqflite)
+- Telephony-based SMS intake
+- Provider state management
+- Secure storage and local auth support
 
 ### Dashboard
-
 - Next.js App Router (TypeScript)
 - React 19
 - MongoDB + Mongoose
-- JWT cookie auth
-- ESLint + TypeScript strict checks
+- JWT authentication
+- Stripe + Razorpay integration points
 
-## Key Product Areas
+## Important API Endpoints
 
-### Flutter App
+### Auth
+- POST /api/auth/signup
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
 
-- SMS transaction ingestion and parser-based extraction.
-- Daily budget ring and spending controls.
-- Transaction management and insights screens.
-- Monthly reports, tools, and security controls.
+### Family
+- POST /api/family/create
+- POST /api/family/join
+- GET /api/family/summary
+- PATCH /api/family/members
+- DELETE /api/family/members
 
-### Dashboard
+### Transactions and Reporting
+- GET /api/transactions
+- POST /api/transactions
+- GET /api/family/transactions/report
 
-- Auth (`/auth`) and family create/join.
-- Overview, Analytics, Transactions, Members, Audit, Billing.
-- Command Center (`/dashboard/command-center`) with:
-  - Executive score and tier.
-  - Risk radar.
-  - Founder playbook.
-  - What-If savings simulation.
-  - `Apply Plan to Family` workflow.
-- Budget and Goals consume the applied action plan automatically.
+### Billing and Payments
+- GET /api/billing/plans
+- GET /api/billing/subscription
+- POST /api/billing/subscribe
+- POST /api/billing/confirm
+- POST /api/billing/webhook
+- GET /api/billing/invoices/export
 
-## Local Setup
+### Audit and CA Pack
+- GET /api/family/audit
+- GET /api/family/audit/export
+- GET /api/family/ca-pack/settings
+- POST /api/family/ca-pack/settings
+- POST /api/family/ca-pack/generate
+- POST /api/family/ca-pack/run-due
 
-## 1) Flutter App
+### Command Center Planning
+- GET /api/dashboard/command-center
+- GET /api/family/action-plan
+- POST /api/family/action-plan
+
+## Quick Start
+
+### 1) Mobile App
 
 Prerequisites:
-
 - Flutter SDK
-- Android SDK or emulator/device
-
-Install and run:
+- Android SDK or physical device
 
 ```bash
-cd /home/xkalp/Desktop/DhanPathAi
 flutter pub get
-flutter run \
-  --dart-define=SUPABASE_URL=your_supabase_url \
-  --dart-define=SUPABASE_ANON_KEY=your_supabase_anon_key
+flutter run
 ```
 
 Run tests:
 
 ```bash
-cd /home/xkalp/Desktop/DhanPathAi
 flutter test
 ```
 
-## 2) Dashboard
+### 2) Dashboard App
 
 Prerequisites:
-
 - Node.js 18+
-- MongoDB instance
-
-Install and run:
+- MongoDB running locally or remotely
 
 ```bash
-cd /home/xkalp/Desktop/DhanPathAi/dashboard
+cd dashboard
 npm install
 npm run dev
 ```
 
-Open: `http://localhost:3000`
-
 Quality checks:
 
 ```bash
-cd /home/xkalp/Desktop/DhanPathAi/dashboard
+cd dashboard
 npm run lint
 npm run build
 ```
 
-## Environment Variables
+## Environment Variables (Dashboard)
 
-### Dashboard (`dashboard/.env`)
-
-Minimum required values:
+Create and update dashboard/.env:
 
 ```env
 MONGODB_URI=mongodb://127.0.0.1:27017
 MONGODB_DB=dhanpath
 JWT_SECRET=replace_with_long_random_secret
-```
-
-Optional billing/URLs:
-
-```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Razorpay
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
+
+# Stripe
+STRIPE_SECRET_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+
+# Optional
 CA_PACK_CRON_SECRET=
 ```
 
-Security note: never commit real secrets or production credentials.
+## Demo Flow (3 Minutes)
 
-## Important Dashboard APIs
-
-Auth:
-
-- `POST /api/auth/signup`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-
-Family:
-
-- `POST /api/family/create`
-- `POST /api/family/join`
-- `GET /api/family/summary`
-- `PATCH /api/family/members`
-- `DELETE /api/family/members`
-
-Transactions and reporting:
-
-- `GET /api/transactions`
-- `POST /api/transactions`
-- `GET /api/family/transactions/report`
-
-Audit and CA pack:
-
-- `GET /api/family/audit`
-- `GET /api/family/audit/export`
-- `GET /api/family/ca-pack/settings`
-- `POST /api/family/ca-pack/settings`
-- `POST /api/family/ca-pack/generate`
-
-Command Center and planning:
-
-- `GET /api/dashboard/command-center`
-- `GET /api/family/action-plan`
-- `POST /api/family/action-plan`
-
-## How the Action Plan Loop Works
-
-1. Founder opens Command Center.
-2. What-If Lab simulates savings based on spend/category cut percentage.
-3. Founder clicks `Apply Plan to Family`.
-4. API persists plan in `ActionPlan` collection.
-5. Budget and Goals pages immediately reflect applied targets and ETA.
-
-This creates a complete loop: insight -> decision -> execution -> tracking.
-
-## Permissions and Security
-
-- Family admin checks are enforced on sensitive endpoints.
-- Membership is reconciled server-side to avoid stale role drift.
-- JWT auth via HTTP-only cookie on dashboard.
-- Mobile app remains offline-first with local storage controls.
-
-## Troubleshooting
-
-- `403 admin access required` on dashboard:
-  verify you are owner/admin in current family and re-login.
-- `Missing JWT_SECRET` or `Missing MONGODB_URI`:
-  confirm `dashboard/.env` values.
-- Billing page stuck/loading:
-  ensure billing env keys are configured and API endpoint responds.
-- Parser mismatch on mobile:
-  run full SMS resync from app tools after parser updates.
+1. Show mobile expense capture and offline reliability.
+2. Show dashboard login and family workspace.
+3. Trigger sync and refresh dashboard transactions.
+4. Show command center insights and apply an action plan.
+5. Highlight billing, webhook automation, and audit/compliance exports.
 
 ## Documentation
 
-- `dashboard/FRONTEND_ARCHITECTURE.md`
-- `docs/HACKATHON_DELIVERY_PLAN.md`
-- `docs/OCEANLAB_HACKATHON_EXECUTION.md`
+- dashboard/FRONTEND_ARCHITECTURE.md
+- docs/HACKATHON_DELIVERY_PLAN.md
+- docs/OCEANLAB_HACKATHON_EXECUTION.md
+- product.md
 
 ## License
 
