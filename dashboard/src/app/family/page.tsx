@@ -20,6 +20,7 @@ type Summary = {
       | "member_removed"
       | "plan_changed"
       | "invoice_exported"
+      | "audit_exported"
       | "family_created"
       | "family_joined";
     actorUserId: string;
@@ -559,6 +560,43 @@ export default function FamilyPage() {
     setError(null);
   }
 
+  async function exportFilteredAuditCsv() {
+    const params = new URLSearchParams({
+      auditAction,
+      auditActorId,
+      auditFrom,
+      auditTo,
+    });
+
+    const res = await fetch(`/api/family/audit/export?${params.toString()}`, { method: "GET" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "could not export audit events");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const contentDisposition = res.headers.get("content-disposition") ?? "";
+    const match = contentDisposition.match(/filename=\"?([^\"]+)\"?/i);
+    anchor.href = url;
+    anchor.download = match?.[1] ?? "dhanpath-audit-events.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setError(null);
+  }
+
+  function clearAuditFilters() {
+    setAuditAction("all");
+    setAuditActorId("all");
+    setAuditFrom("");
+    setAuditTo("");
+    setAuditPage(1);
+  }
+
   const storyText = useMemo(() => {
     if (!summary) return "No data yet.";
     const topCategory = summary.topCategories[0];
@@ -616,6 +654,7 @@ export default function FamilyPage() {
     member_removed: "Member Removed",
     plan_changed: "Plan Changed",
     invoice_exported: "Invoice Exported",
+    audit_exported: "Audit Exported",
     family_created: "Family Created",
     family_joined: "Family Joined",
   };
@@ -980,6 +1019,7 @@ export default function FamilyPage() {
                   <option value="member_removed">Member Removed</option>
                   <option value="plan_changed">Plan Changed</option>
                   <option value="invoice_exported">Invoice Exported</option>
+                  <option value="audit_exported">Audit Exported</option>
                   <option value="family_created">Family Created</option>
                   <option value="family_joined">Family Joined</option>
                 </select>
@@ -1023,6 +1063,14 @@ export default function FamilyPage() {
                   }}
                 />
               </label>
+            </div>
+            <div className="audit-actions">
+              <button type="button" className="ghost" onClick={clearAuditFilters}>
+                Clear Filters
+              </button>
+              <button type="button" className="ghost" onClick={exportFilteredAuditCsv}>
+                Export Filtered Audit CSV
+              </button>
             </div>
             <ul className="list">
               {(summary?.recentAudit ?? []).map((entry) => (
