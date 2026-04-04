@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 type NavItem = {
   label: string;
   href: string;
-  icon: "overview" | "transactions" | "analytics" | "insights" | "budget" | "goals" | "members" | "audit" | "pack" | "billing" | "settings";
+  icon: "overview" | "command" | "transactions" | "analytics" | "insights" | "budget" | "goals" | "members" | "audit" | "pack" | "billing" | "settings";
   badge?: string;
 };
 
@@ -21,6 +21,7 @@ const navGroups: NavGroup[] = [
     title: "Main",
     items: [
       { label: "Overview", href: "/dashboard", icon: "overview" },
+      { label: "Command Center", href: "/dashboard/command-center", icon: "command" },
       { label: "Transactions", href: "/dashboard/transactions", icon: "transactions" },
       { label: "Analytics", href: "/dashboard/analytics", icon: "analytics" },
       { label: "Insights", href: "/dashboard/insights", icon: "insights" },
@@ -65,6 +66,8 @@ function navIcon(icon: NavItem["icon"]) {
   switch (icon) {
     case "overview":
       return <svg {...common}><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"/></svg>;
+    case "command":
+      return <svg {...common}><path d="M4 12h16"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/></svg>;
     case "transactions":
       return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h3"/></svg>;
     case "analytics":
