@@ -1,0 +1,30 @@
+<!--
+  Supabase Dashboard → Authentication → Email Templates → "Magic Link"
+
+  1. Replace the entire body with the HTML below (Subject can stay or use: "Your DhanPath sign-in code").
+  2. Save. New emails will include BOTH the 6-digit code and the link.
+
+  Variables Supabase provides:
+  - {{ .Token }}           → 6-digit OTP (paste this in the app)
+  - {{ .ConfirmationURL }} → magic link (opens browser / deep link)
+  - {{ .Email }}           → user email
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5; color: #111; max-width: 480px; margin: 0 auto; padding: 24px;">
+  <h2 style="margin: 0 0 12px;">Sign in to DhanPath</h2>
+  <p style="margin: 0 0 16px; color: #444;">Use this one-time code in the app:</p>
+  <p style="margin: 0 0 24px; font-size: 32px; font-weight: 700; letter-spacing: 8px; font-family: ui-monospace, monospace;">
+    {{ .Token }}
+  </p>
+  <p style="margin: 0 0 8px; color: #444;">Or tap the link below (same sign-in):</p>
+  <p style="margin: 0 0 24px;">
+    <a href="{{ .ConfirmationURL }}" style="color: #0d9488; font-weight: 600;">Log in with magic link</a>
+  </p>
+  <p style="margin: 0; font-size: 12px; color: #888;">If you didn’t request this, you can ignore this email.</p>
+</body>
+</html>
