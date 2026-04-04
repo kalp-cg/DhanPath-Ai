@@ -20,12 +20,83 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "no family found for user" }, { status: 404 });
   }
 
-  const txns = await Transaction.find({ familyId: user.familyId })
+  const memberId = request.nextUrl.searchParams.get("memberId")?.trim() ?? "all";
+  const type = request.nextUrl.searchParams.get("type")?.trim() ?? "all";
+  const category = request.nextUrl.searchParams.get("category")?.trim() ?? "all";
+  const from = request.nextUrl.searchParams.get("from")?.trim() ?? "";
+  const to = request.nextUrl.searchParams.get("to")?.trim() ?? "";
+  const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") ?? "1"));
+  const pageSize = Math.max(10, Math.min(100, Number(request.nextUrl.searchParams.get("pageSize") ?? "20")));
+
+  const query: {
+    familyId: unknown;
+    userId?: unknown;
+    type?: "debit" | "credit";
+    category?: string;
+    txnTime?: { $gte?: Date; $lte?: Date };
+  } = { familyId: user.familyId };
+
+  if (memberId !== "all") {
+    query.userId = memberId;
+  }
+
+  if (type === "debit" || type === "credit") {
+    query.type = type;
+  }
+
+  if (category !== "all") {
+    query.category = category;
+  }
+
+  if (from || to) {
+    query.txnTime = {};
+    if (from) {
+      const fromDate = new Date(from);
+      if (!Number.isNaN(fromDate.getTime())) {
+        query.txnTime.$gte = fromDate;
+      }
+    }
+    if (to) {
+      const toDate = new Date(to);
+      if (!Number.isNaN(toDate.getTime())) {
+        toDate.setHours(23, 59, 59, 999);
+        query.txnTime.$lte = toDate;
+      }
+    }
+  }
+
+  const totalTransactions = await Transaction.countDocuments(query);
+  const totalPages = Math.max(1, Math.ceil(totalTransactions / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const skip = (safePage - 1) * pageSize;
+
+  const txns = await Transaction.find(query)
     .sort({ txnTime: -1 })
-    .limit(50)
+    .skip(skip)
+    .limit(pageSize)
     .lean();
 
-  return NextResponse.json({ transactions: txns }, { status: 200 });
+  const userIds = Array.from(new Set(txns.map((txn) => String(txn.userId))));
+  const users = await User.find({ _id: { $in: userIds } }).lean();
+  const nameMap = new Map(users.map((u) => [String(u._id), u.name ?? "Member"]));
+
+  return NextResponse.json(
+    {
+      transactions: txns.map((txn) => ({
+        ...txn,
+        userName: nameMap.get(String(txn.userId)) ?? txn.userEmail,
+      })),
+      pagination: {
+        page: safePage,
+        pageSize,
+        totalTransactions,
+        totalPages,
+        hasPrev: safePage > 1,
+        hasNext: safePage < totalPages,
+      },
+    },
+    { status: 200 },
+  );
 }
 
 export async function POST(request: NextRequest) {

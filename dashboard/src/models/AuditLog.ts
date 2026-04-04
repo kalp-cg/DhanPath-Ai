@@ -6,6 +6,7 @@ export type AuditAction =
   | "plan_changed"
   | "invoice_exported"
   | "audit_exported"
+  | "transaction_report_exported"
   | "family_created"
   | "family_joined";
 
@@ -32,6 +33,7 @@ const auditLogSchema = new Schema<AuditLogDoc>(
         "plan_changed",
         "invoice_exported",
         "audit_exported",
+        "transaction_report_exported",
         "family_created",
         "family_joined",
       ],

@@ -5,6 +5,19 @@ import { useRouter } from "next/navigation";
 
 type User = { id: string; email: string; name: string; familyId: string | null };
 
+type FullTransaction = {
+  _id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  amount: number;
+  type: "debit" | "credit";
+  category: string;
+  merchant: string | null;
+  source: string;
+  txnTime: string;
+};
+
 type Summary = {
   currentUserId: string;
   isCurrentUserAdmin: boolean;
@@ -21,6 +34,7 @@ type Summary = {
       | "plan_changed"
       | "invoice_exported"
       | "audit_exported"
+      | "transaction_report_exported"
       | "family_created"
       | "family_joined";
     actorUserId: string;
@@ -126,6 +140,21 @@ export default function FamilyPage() {
   const [auditActorId, setAuditActorId] = useState("all");
   const [auditFrom, setAuditFrom] = useState("");
   const [auditTo, setAuditTo] = useState("");
+  const [fullTxns, setFullTxns] = useState<FullTransaction[]>([]);
+  const [fullTxPage, setFullTxPage] = useState(1);
+  const [fullTxType, setFullTxType] = useState("all");
+  const [fullTxMemberId, setFullTxMemberId] = useState("all");
+  const [fullTxCategory, setFullTxCategory] = useState("all");
+  const [fullTxFrom, setFullTxFrom] = useState("");
+  const [fullTxTo, setFullTxTo] = useState("");
+  const [fullTxPagination, setFullTxPagination] = useState({
+    page: 1,
+    pageSize: 20,
+    totalTransactions: 0,
+    totalPages: 1,
+    hasPrev: false,
+    hasNext: false,
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -393,23 +422,68 @@ export default function FamilyPage() {
     auditPage,
   ]);
 
+  const fetchAllTransactions = useCallback(async () => {
+    const params = new URLSearchParams({
+      page: String(fullTxPage),
+      pageSize: "20",
+      type: fullTxType,
+      memberId: fullTxMemberId,
+      category: fullTxCategory,
+      from: fullTxFrom,
+      to: fullTxTo,
+    });
+
+    const res = await fetch(`/api/transactions?${params.toString()}`, { cache: "no-store" });
+    if (!res.ok) {
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    const rows = Array.isArray(data.transactions)
+      ? data.transactions.map((txn: Record<string, unknown>) => ({
+          _id: String(txn._id ?? ""),
+          userId: String(txn.userId ?? ""),
+          userName: String(txn.userName ?? "Member"),
+          userEmail: String(txn.userEmail ?? ""),
+          amount: Number(txn.amount ?? 0),
+          type: txn.type === "credit" ? "credit" : "debit",
+          category: String(txn.category ?? "Uncategorized"),
+          merchant: txn.merchant ? String(txn.merchant) : null,
+          source: String(txn.source ?? "manual"),
+          txnTime: String(txn.txnTime ?? ""),
+        }))
+      : [];
+    setFullTxns(rows);
+    setFullTxPagination({
+      page: Number(data.pagination?.page ?? 1),
+      pageSize: Number(data.pagination?.pageSize ?? 20),
+      totalTransactions: Number(data.pagination?.totalTransactions ?? 0),
+      totalPages: Number(data.pagination?.totalPages ?? 1),
+      hasPrev: Boolean(data.pagination?.hasPrev),
+      hasNext: Boolean(data.pagination?.hasNext),
+    });
+  }, [fullTxCategory, fullTxFrom, fullTxMemberId, fullTxPage, fullTxTo, fullTxType]);
+
   useEffect(() => {
     let mounted = true;
 
     async function boot() {
       const me = await fetchMe();
       if (mounted && me?.familyId) {
-        await fetchSummary();
+        await Promise.all([fetchSummary(), fetchAllTransactions()]);
       }
     }
 
     boot();
-    const interval = setInterval(fetchSummary, 5000);
+    const interval = setInterval(() => {
+      void fetchSummary();
+      void fetchAllTransactions();
+    }, 5000);
     return () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [fetchMe, fetchSummary]);
+  }, [fetchAllTransactions, fetchMe, fetchSummary]);
 
   async function createFamily(e: FormEvent) {
     e.preventDefault();
@@ -477,6 +551,7 @@ export default function FamilyPage() {
 
     setAmount("0");
     await fetchSummary();
+    await fetchAllTransactions();
     setBusy(false);
   }
 
@@ -589,6 +664,43 @@ export default function FamilyPage() {
     setError(null);
   }
 
+  async function exportTransactionsReport(format: "csv" | "html") {
+    const params = new URLSearchParams({
+      format,
+      type: fullTxType,
+      memberId: fullTxMemberId,
+      category: fullTxCategory,
+      from: fullTxFrom,
+      to: fullTxTo,
+    });
+
+    const endpoint = `/api/family/transactions/report?${params.toString()}`;
+    if (format === "html") {
+      window.open(endpoint, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    const res = await fetch(endpoint, { method: "GET" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "could not export transaction report");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const contentDisposition = res.headers.get("content-disposition") ?? "";
+    const match = contentDisposition.match(/filename=\"?([^\"]+)\"?/i);
+    anchor.href = url;
+    anchor.download = match?.[1] ?? "dhanpath-transactions-report.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setError(null);
+  }
+
   function clearAuditFilters() {
     setAuditAction("all");
     setAuditActorId("all");
@@ -655,6 +767,7 @@ export default function FamilyPage() {
     plan_changed: "Plan Changed",
     invoice_exported: "Invoice Exported",
     audit_exported: "Audit Exported",
+    transaction_report_exported: "Transaction Report Exported",
     family_created: "Family Created",
     family_joined: "Family Joined",
   };
@@ -1020,6 +1133,7 @@ export default function FamilyPage() {
                   <option value="plan_changed">Plan Changed</option>
                   <option value="invoice_exported">Invoice Exported</option>
                   <option value="audit_exported">Audit Exported</option>
+                  <option value="transaction_report_exported">Transaction Report Exported</option>
                   <option value="family_created">Family Created</option>
                   <option value="family_joined">Family Joined</option>
                 </select>
@@ -1148,6 +1262,134 @@ export default function FamilyPage() {
                 className="ghost"
                 disabled={!summary?.pagination?.hasNext}
                 onClick={() => setPage((prev) => prev + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </section>
+
+          <section className="panel">
+            <h3>All Transactions (Full History)</h3>
+            <div className="filter-row audit-filter-row">
+              <label>
+                Member
+                <select
+                  value={fullTxMemberId}
+                  onChange={(e) => {
+                    setFullTxMemberId(e.target.value);
+                    setFullTxPage(1);
+                  }}
+                >
+                  <option value="all">All Members</option>
+                  {(summary?.members ?? []).map((member) => (
+                    <option key={member.userId} value={member.userId}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Type
+                <select
+                  value={fullTxType}
+                  onChange={(e) => {
+                    setFullTxType(e.target.value);
+                    setFullTxPage(1);
+                  }}
+                >
+                  <option value="all">All Types</option>
+                  <option value="debit">Debit</option>
+                  <option value="credit">Credit</option>
+                </select>
+              </label>
+              <label>
+                Category
+                <input
+                  value={fullTxCategory === "all" ? "" : fullTxCategory}
+                  placeholder="All categories"
+                  onChange={(e) => {
+                    const value = e.target.value.trim();
+                    setFullTxCategory(value.length > 0 ? value : "all");
+                    setFullTxPage(1);
+                  }}
+                />
+              </label>
+              <label>
+                From
+                <input
+                  type="date"
+                  value={fullTxFrom}
+                  onChange={(e) => {
+                    setFullTxFrom(e.target.value);
+                    setFullTxPage(1);
+                  }}
+                />
+              </label>
+              <label>
+                To
+                <input
+                  type="date"
+                  value={fullTxTo}
+                  onChange={(e) => {
+                    setFullTxTo(e.target.value);
+                    setFullTxPage(1);
+                  }}
+                />
+              </label>
+            </div>
+            <div className="audit-actions">
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  setFullTxMemberId("all");
+                  setFullTxType("all");
+                  setFullTxCategory("all");
+                  setFullTxFrom("");
+                  setFullTxTo("");
+                  setFullTxPage(1);
+                }}
+              >
+                Clear Transaction Filters
+              </button>
+              <button type="button" className="ghost" onClick={() => exportTransactionsReport("csv")}>Export CSV for CA</button>
+              <button type="button" className="ghost" onClick={() => exportTransactionsReport("html")}>Open PDF View for CA</button>
+            </div>
+
+            <ul className="list txn-list">
+              {fullTxns.map((txn) => (
+                <li key={txn._id}>
+                  <div className="list-main">
+                    <span>
+                      {txn.userName} · {txn.category} · {txn.merchant ?? "Unknown merchant"}
+                    </span>
+                    <small>{new Date(txn.txnTime).toLocaleString()}</small>
+                    <small className={`chip ${txn.type === "credit" ? "credit" : "debit"}`}>
+                      {txn.type.toUpperCase()} · {txn.source}
+                    </small>
+                  </div>
+                  <strong>{money.format(txn.amount)}</strong>
+                </li>
+              ))}
+            </ul>
+
+            <div className="pager">
+              <button
+                type="button"
+                className="ghost"
+                disabled={!fullTxPagination.hasPrev}
+                onClick={() => setFullTxPage((prev) => Math.max(1, prev - 1))}
+              >
+                Previous
+              </button>
+              <span>
+                Page {fullTxPagination.page} of {fullTxPagination.totalPages} · Total {fullTxPagination.totalTransactions}
+              </span>
+              <button
+                type="button"
+                className="ghost"
+                disabled={!fullTxPagination.hasNext}
+                onClick={() => setFullTxPage((prev) => prev + 1)}
               >
                 Next
               </button>
