@@ -1,129 +1,192 @@
+<div align="center">
+
 # DhanPath AI
 
-<p align="center">
-  <img src="assets/icon/app_icon.png" alt="DhanPath AI Logo" width="132" />
-</p>
+<img src="assets/icon/app_icon.png" alt="DhanPath AI Logo" width="132" />
 
-<p align="center">
-  <a href="PASTE_YOUR_YOUTUBE_DEMO_LINK_HERE">
-    <img src="https://img.shields.io/badge/YouTube-Demo%20Video-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Demo Video" />
-  </a>
-</p>
+### Enterprise-Ready Family Finance Intelligence Platform
 
-<p align="center">
-  <strong>Watch the complete product walkthrough:</strong><br/>
-  <a href="PASTE_YOUR_YOUTUBE_DEMO_LINK_HERE">Demo Video of Whole Product</a>
-</p>
+Transform fragmented transaction data into actionable family decisions with an offline-first mobile pipeline, premium command center analytics, secure payment automation, and audit-grade compliance workflows.
 
-Premium AI-powered family finance product for hackathons and real-world operations.
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
+[![Razorpay](https://img.shields.io/badge/Razorpay-Integrated-0C65E8?style=for-the-badge&logo=razorpay)](https://razorpay.com/)
+[![Stripe](https://img.shields.io/badge/Stripe-Integrated-635BFF?style=for-the-badge&logo=stripe)](https://stripe.com/)
 
-- Mobile app: offline-first capture, SMS parsing, SQLite reliability.
-- Dashboard: command center, analytics, billing, governance, and CA-ready exports.
-- Sync bridge: one-way mobile to cloud flow for stable demo delivery.
+[![YouTube Demo](https://img.shields.io/badge/YouTube-Demo%20Video-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/hg5G3bS4rhg)
 
-## Hackathon Priority Highlights
+[Live Demo](#)  [Architecture](#system-architecture-and-data-flow)  [Quick Start](#quick-start)
 
-### 1. Payment Gateway + Subscription Flow
-- Dual payment readiness with Stripe and Razorpay wiring.
-- Plan-based subscription model with provider metadata and usage tracking.
-- Billing history export for operational and investor review.
+</div>
 
-### 2. SMS Parsing Engine (Core Innovation)
-- Bank SMS parser pipeline with transaction extraction and categorization.
-- Duplicate detection for repeated bank notifications.
-- Offline-first persistence so data survives weak/no network.
+---
 
-### 3. Verified Webhooks for Billing Automation
-- Dedicated webhook endpoint for payment event ingestion.
-- Signature validation before state mutation.
-- Automated subscription updates after successful payment events.
+## What Makes DhanPath AI Different
 
-### 4. Demo-Stable Architecture
-- MongoDB-backed dashboard APIs with JWT auth cookies.
-- One-way sync from mobile local data to dashboard family ledger.
-- Scope locked for reliability-first hackathon demonstration.
+DhanPath AI is not just an expense tracker. It is a full product ecosystem that connects mobile capture, family collaboration, premium analytics, billing operations, and compliance-grade reporting in one deployable platform.
 
-## Product Feature Catalog
+### Product Differentiators
 
-### Authentication and Access
-- Unified login and signup flow.
-- JWT session auth with HTTP-only cookie strategy.
-- Family create/join workflow with invite-code onboarding.
+| Capability | Typical Finance Apps | DhanPath AI Approach | Outcome |
+|------------|----------------------|----------------------|---------|
+| SMS Parsing | Basic regex-only extraction | Parser pipeline + transaction dedup + categorization | Higher parsing reliability and cleaner ledgers |
+| Payments | Single provider, manual tracking | Stripe + Razorpay + subscription state timeline | Billing flexibility and upgrade readiness |
+| Webhooks | Optional or loosely verified | Signature-verified billing webhook automation | Secure post-payment provisioning |
+| Family Finance | Single-user reporting | Family workspace with roles, invite flow, member governance | True household-level intelligence |
+| Decision Layer | Static charts only | Command Center + risk radar + What-If simulation + plan application | Insight to execution loop |
+| Compliance | Manual exports | Audit feed + export + CA pack schedule + tokenized share links | Better governance and CA handoff |
+| Demo Stability | Always-online dependency | Offline-first mobile + one-way sync architecture | High reliability for hackathons and field demos |
 
-### Family Workspace and Roles
-- Family-level data visibility with role-sensitive actions.
-- Member management (role change, remove member).
-- Invite sharing and household onboarding support.
+---
 
-### Financial Operations
-- Manual + imported transaction ledger support.
-- Category and member-level drill-down.
-- Monthly report endpoints and export pathways.
+## Hackathon-First Highlights
 
-### Command Center (Founder/Admin Mode)
-- Executive score and performance tier.
-- Risk radar and operational health surfaces.
-- What-If Lab to simulate savings strategies.
-- One-click Apply Plan to Family action.
+### 1) Payment Gateway and Subscription Engine
+- Dual payment integration support (Razorpay and Stripe).
+- Plan and usage-aware subscription model.
+- Billing event timeline and invoice export APIs.
 
-### Budget and Goals Intelligence
-- Budget utilization with pressure-point visibility.
-- Goal progress board with ETA logic.
-- Automatic linkage to active action plans.
+### 2) SMS Parsing Core (Innovation Layer)
+- Bank SMS ingestion and transaction extraction pipeline.
+- Duplicate protection for repeated bank notifications.
+- Offline-first local persistence before cloud sync.
 
-### Billing, Invoices, and Governance
-- Subscription read model with provider and timeline state.
-- Billing event history and CSV export.
-- Audit trail for critical family and admin operations.
+### 3) Verified Webhook Automation
+- Dedicated billing webhook endpoint.
+- Signature verification before accepting events.
+- Auto-updates subscription state on successful payment events.
 
-### CA Pack and Compliance Workflows
-- CA schedule setup with include-audit option.
-- Monthly pack generation and tokenized sharing.
-- CSV/PDF retrieval for accountant-ready handoff.
+### 4) Command Center for Decision Intelligence
+- Executive score and operational health context.
+- Risk radar + founder playbook.
+- What-If Lab with one-click Apply Plan to Family.
 
-## Product Areas by Surface
+---
+
+## Core Feature Portfolio
 
 ### Mobile App (Flutter)
-- Offline transaction store (SQLite).
-- SMS ingestion and parser-based extraction.
-- Financial views and quick insights for daily use.
-- Cloud sync trigger for dashboard visibility.
+- Offline transaction storage using SQLite.
+- SMS-based transaction parsing and categorization.
+- Local-first flows for high reliability.
+- Cloud sync trigger for dashboard reporting.
 
-### Web Dashboard (Next.js)
-- Landing and auth experience.
-- Overview, transactions, analytics, insights, members, audit.
+### Dashboard (Next.js)
+- Premium landing and auth experience.
+- Family create/join, members, and role management.
+- Overview, analytics, insights, and transactions modules.
 - Billing and CA pack operations.
-- Command center for strategy-to-execution loops.
+
+### Governance and Compliance
+- Audit log timelines with filters.
+- CSV export for audit and billing events.
+- CA pack settings, generation, and tokenized share delivery.
+
+### AI and Planning Layer
+- Command Center executive snapshot.
+- Risk alerts and trend diagnostics.
+- Action plan persistence and downstream use in Budget/Goals.
+
+---
+
+## System Architecture and Data Flow
+
+```mermaid
+graph TB
+    subgraph Mobile
+      A[Flutter App]
+      B[SQLite Local Store]
+      C[SMS Parser Pipeline]
+    end
+
+    subgraph Web
+      D[Next.js Dashboard]
+      E[API Routes]
+      F[Auth and Role Guards]
+      G[Billing and Webhooks]
+      H[Command Center]
+    end
+
+    subgraph Data
+      I[(MongoDB)]
+    end
+
+    A --> C
+    C --> B
+    B -->|One-way Sync| E
+    D --> E
+    E --> F
+    E --> G
+    E --> H
+    F --> I
+    G --> I
+    H --> I
+```
+
+```mermaid
+sequenceDiagram
+    participant M as Mobile App
+    participant API as Dashboard API
+    participant DB as MongoDB
+    participant UI as Dashboard UI
+
+    M->>M: Parse bank SMS to transactions
+    M->>API: POST /api/transactions (batch sync)
+    API->>DB: Upsert and deduplicate
+    DB-->>API: Sync stats
+    API-->>M: Synced and duplicate counts
+
+    UI->>API: GET /api/dashboard/command-center
+    API->>DB: Aggregate risk and trend data
+    DB-->>API: Metrics and insights
+    API-->>UI: Executive score and playbook
+```
+
+---
+
+## Technology Stack
+
+### Mobile
+
+| Technology | Purpose |
+|------------|---------|
+| Flutter / Dart | Cross-platform app runtime |
+| SQLite (sqflite) | Offline transaction persistence |
+| Telephony APIs | SMS ingestion pipeline |
+| Provider | State management |
+| Secure Storage / Local Auth | Device-level protection |
+
+### Dashboard and APIs
+
+| Technology | Purpose |
+|------------|---------|
+| Next.js App Router | Frontend + API routes |
+| React 19 | UI rendering |
+| TypeScript | End-to-end type safety |
+| MongoDB + Mongoose | Operational datastore |
+| JWT Cookies | Session/auth mechanism |
+| Razorpay and Stripe | Payment and subscriptions |
+
+---
 
 ## Monorepo Structure
 
 ```text
 DhanPath-Ai/
-  lib/                    Flutter mobile app source
-  test/                   Flutter test suite
-  dashboard/              Next.js dashboard + API routes
-  docs/                   Hackathon and product docs
-  assets/                 Icons and static media
-  android/ ios/ web/ ...  Platform targets
+├── lib/                    Flutter app source
+├── test/                   Flutter tests
+├── dashboard/              Next.js dashboard + backend APIs
+├── docs/                   Hackathon plans and product docs
+├── assets/                 App icons and shared media
+├── android/ ios/ web/      Platform runners
+└── product.md              Page-wise product logic
 ```
 
-## Tech Stack
+---
 
-### Mobile
-- Flutter / Dart
-- SQLite (sqflite)
-- Telephony-based SMS intake
-- Provider state management
-- Secure storage and local auth support
-
-### Dashboard
-- Next.js App Router (TypeScript)
-- React 19
-- MongoDB + Mongoose
-- JWT authentication
-- Stripe + Razorpay integration points
-
-## Important API Endpoints
+## API Surface (Important)
 
 ### Auth
 - POST /api/auth/signup
@@ -138,18 +201,23 @@ DhanPath-Ai/
 - PATCH /api/family/members
 - DELETE /api/family/members
 
-### Transactions and Reporting
+### Transactions
 - GET /api/transactions
 - POST /api/transactions
 - GET /api/family/transactions/report
 
-### Billing and Payments
+### Billing and Webhooks
 - GET /api/billing/plans
 - GET /api/billing/subscription
 - POST /api/billing/subscribe
 - POST /api/billing/confirm
 - POST /api/billing/webhook
 - GET /api/billing/invoices/export
+
+### Command Center and Planning
+- GET /api/dashboard/command-center
+- GET /api/family/action-plan
+- POST /api/family/action-plan
 
 ### Audit and CA Pack
 - GET /api/family/audit
@@ -159,18 +227,16 @@ DhanPath-Ai/
 - POST /api/family/ca-pack/generate
 - POST /api/family/ca-pack/run-due
 
-### Command Center Planning
-- GET /api/dashboard/command-center
-- GET /api/family/action-plan
-- POST /api/family/action-plan
+---
 
 ## Quick Start
 
-### 1) Mobile App
-
-Prerequisites:
+### Prerequisites
 - Flutter SDK
-- Android SDK or physical device
+- Node.js 18+
+- MongoDB local or cloud instance
+
+### 1) Mobile App
 
 ```bash
 flutter pub get
@@ -183,11 +249,7 @@ Run tests:
 flutter test
 ```
 
-### 2) Dashboard App
-
-Prerequisites:
-- Node.js 18+
-- MongoDB running locally or remotely
+### 2) Dashboard
 
 ```bash
 cd dashboard
@@ -195,7 +257,7 @@ npm install
 npm run dev
 ```
 
-Quality checks:
+Build and quality checks:
 
 ```bash
 cd dashboard
@@ -203,9 +265,11 @@ npm run lint
 npm run build
 ```
 
-## Environment Variables (Dashboard)
+---
 
-Create and update dashboard/.env:
+## Environment Variables
+
+Update `dashboard/.env`:
 
 ```env
 MONGODB_URI=mongodb://127.0.0.1:27017
@@ -226,20 +290,27 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 CA_PACK_CRON_SECRET=
 ```
 
-## Demo Flow (3 Minutes)
+---
 
-1. Show mobile expense capture and offline reliability.
-2. Show dashboard login and family workspace.
-3. Trigger sync and refresh dashboard transactions.
-4. Show command center insights and apply an action plan.
-5. Highlight billing, webhook automation, and audit/compliance exports.
+## 3-Minute Demo Flow
 
-## Documentation
+1. Show offline mobile capture and SMS parsing.
+2. Show family login and workspace context.
+3. Trigger sync and verify data on dashboard.
+4. Open Command Center and apply an action plan.
+5. Show billing + webhook + audit + CA pack operations.
+
+---
+
+## Documentation Map
 
 - dashboard/FRONTEND_ARCHITECTURE.md
 - docs/HACKATHON_DELIVERY_PLAN.md
 - docs/OCEANLAB_HACKATHON_EXECUTION.md
+- docs/page_wise.md
 - product.md
+
+---
 
 ## License
 
