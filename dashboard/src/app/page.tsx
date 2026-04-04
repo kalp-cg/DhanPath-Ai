@@ -9,16 +9,19 @@ export default async function HomePage() {
   const token = cookieStore.get(AUTH_COOKIE)?.value;
 
   if (token) {
-    redirect("/family");
+    redirect("/dashboard");
   }
 
   return (
-    <main className="shell landing-shell">
-      <section className="panel hero">
-        <h1>DhanPath AI Dashboard</h1>
-        <p>Fresh MongoDB + Next.js workflow for email/password auth, family matching, and transactions.</p>
+    <main className="landing-shell">
+      <section className="hero">
+        <h1>DhanPath Workspace</h1>
+        <p>
+          The family finance dashboard built for daily use. Track spending, manage budgets,
+          and run planning with one focused workspace.
+        </p>
         <Link className="primary-link" href="/auth">
-          Start Now
+          Get Started →
         </Link>
       </section>
     </main>

@@ -37,15 +37,15 @@ export default function AuthPage() {
       return;
     }
 
-    router.push("/family");
+    router.push("/dashboard");
     router.refresh();
   }
 
   return (
-    <main className="shell auth-shell">
-      <section className="panel auth-panel">
+    <main className="auth-shell">
+      <section className="auth-panel">
         <h1>DhanPath AI</h1>
-        <p>Simple family finance workflow with MongoDB + email/password.</p>
+        <p>The smart family finance workspace. Track, analyze, and optimize together.</p>
 
         <div className="auth-tabs">
           <button

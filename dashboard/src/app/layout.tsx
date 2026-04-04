@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Manrope, Sora } from "next/font/google";
 
 import "./globals.css";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
+const sora = Sora({ subsets: ["latin"], variable: "--font-sora" });
 
 export const metadata: Metadata = {
-  title: "DhanPath AI - Mongo Dashboard",
-  description: "Basic SaaS workflow with MongoDB, email/password auth, family management, and transactions.",
+  title: "DhanPath - Finance Workspace",
+  description: "Family finance workspace with transaction analytics, budgeting, billing, and reporting.",
 };
 
 export default function RootLayout({
@@ -16,7 +17,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={geist.variable}>
+    <html
+      lang="en"
+      className={`${manrope.variable} ${sora.variable}`}
+      data-theme="light"
+      data-scroll-behavior="smooth"
+    >
       <body>{children}</body>
     </html>
   );
