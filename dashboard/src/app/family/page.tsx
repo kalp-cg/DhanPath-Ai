@@ -17,12 +17,29 @@ type Summary = {
   topCategories: Array<{ category: string; amount: number }>;
   monthlyTimeline: Array<{ month: number; label: string; amount: number }>;
   yearlyTotals: Array<{ year: number; amount: number }>;
+  memberTransactionStats: Array<{
+    userId: string;
+    userName: string;
+    totalSpend: number;
+    transactionCount: number;
+  }>;
+  selectedMemberId: string;
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalTransactions: number;
+    totalPages: number;
+    hasPrev: boolean;
+    hasNext: boolean;
+  };
   recentTransactions: Array<{
     id: string;
+    userId: string;
     userName: string;
     amount: number;
     type: "debit" | "credit";
     category: string;
+    merchant: string | null;
     source: string;
     txnTime: string;
   }>;
@@ -38,6 +55,8 @@ export default function FamilyPage() {
   const [category, setCategory] = useState("General");
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedMemberId, setSelectedMemberId] = useState("all");
+  const [page, setPage] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,6 +135,9 @@ export default function FamilyPage() {
     const params = new URLSearchParams({
       year: String(selectedYear),
       month: String(selectedMonth),
+      memberId: selectedMemberId,
+      page: String(page),
+      pageSize: "10",
     });
     const res = await fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" });
     if (!res.ok) {
@@ -124,7 +146,7 @@ export default function FamilyPage() {
     }
     const data = await res.json();
     setSummary(data);
-  }, [selectedYear, selectedMonth, setSummary]);
+  }, [page, selectedMemberId, selectedYear, selectedMonth, setSummary]);
 
   useEffect(() => {
     let mounted = true;
@@ -339,7 +361,13 @@ export default function FamilyPage() {
             <div className="filter-row">
               <label>
                 Year
-                <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => {
+                    setSelectedYear(Number(e.target.value));
+                    setPage(1);
+                  }}
+                >
                   {(summary?.availableYears ?? [selectedYear]).map((year) => (
                     <option key={year} value={year}>
                       {year}
@@ -349,7 +377,13 @@ export default function FamilyPage() {
               </label>
               <label>
                 Month
-                <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    setSelectedMonth(Number(e.target.value));
+                    setPage(1);
+                  }}
+                >
                   {Array.from({ length: 12 }, (_, idx) => (
                     <option key={idx + 1} value={idx + 1}>
                       {new Date(2026, idx, 1).toLocaleString("en-US", { month: "long" })}
@@ -422,6 +456,47 @@ export default function FamilyPage() {
             </div>
           </section>
 
+          <section className="panel">
+            <h3>Member Totals ({monthTitle})</h3>
+            <div className="member-pills">
+              <button
+                type="button"
+                className={selectedMemberId === "all" ? "pill active" : "pill"}
+                onClick={() => {
+                  setSelectedMemberId("all");
+                  setPage(1);
+                }}
+              >
+                All Members
+              </button>
+              {(summary?.memberTransactionStats ?? []).map((member) => (
+                <button
+                  key={member.userId}
+                  type="button"
+                  className={selectedMemberId === member.userId ? "pill active" : "pill"}
+                  onClick={() => {
+                    setSelectedMemberId(member.userId);
+                    setPage(1);
+                  }}
+                >
+                  {member.userName}
+                </button>
+              ))}
+            </div>
+
+            <ul className="list">
+              {(summary?.memberTransactionStats ?? []).map((member) => (
+                <li key={member.userId}>
+                  <div className="list-main">
+                    <span>{member.userName}</span>
+                    <small>{member.transactionCount} transactions</small>
+                  </div>
+                  <strong>{money.format(member.totalSpend)}</strong>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="panel grid-two">
             <div>
               <h3>Month-wise Spend ({selectedYear})</h3>
@@ -483,8 +558,9 @@ export default function FamilyPage() {
                 <li key={t.id}>
                   <div className="list-main">
                     <span>
-                      {t.userName} · {t.category} · {new Date(t.txnTime).toLocaleString()}
+                      {t.userName} · {t.category} · {t.merchant ?? "Unknown merchant"}
                     </span>
+                    <small>{new Date(t.txnTime).toLocaleString()}</small>
                     <small className={`chip ${t.type === "credit" ? "credit" : "debit"}`}>
                       {t.type.toUpperCase()} · {t.source}
                     </small>
@@ -493,6 +569,29 @@ export default function FamilyPage() {
                 </li>
               )) ?? <li>No transactions yet.</li>}
             </ul>
+
+            <div className="pager">
+              <button
+                type="button"
+                className="ghost"
+                disabled={!summary?.pagination?.hasPrev}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                Previous
+              </button>
+              <span>
+                Page {summary?.pagination?.page ?? 1} of {summary?.pagination?.totalPages ?? 1} · Total{" "}
+                {summary?.pagination?.totalTransactions ?? 0}
+              </span>
+              <button
+                type="button"
+                className="ghost"
+                disabled={!summary?.pagination?.hasNext}
+                onClick={() => setPage((prev) => prev + 1)}
+              >
+                Next
+              </button>
+            </div>
           </section>
         </>
       )}

@@ -294,6 +294,41 @@ select {
   background: #def7e8;
 }
 
+.member-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.pill {
+  border: 1px solid var(--line);
+  background: #f0e9de;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.pill.active {
+  background: var(--secondary);
+  color: #fff;
+}
+
+.pager {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pager span {
+  font-size: 13px;
+  color: #4b5d66;
+}
+
 @media (max-width: 740px) {
   .inline-form {
     grid-template-columns: 1fr;
@@ -319,5 +354,10 @@ select {
 
   .filter-row {
     grid-template-columns: 1fr;
+  }
+
+  .pager {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
