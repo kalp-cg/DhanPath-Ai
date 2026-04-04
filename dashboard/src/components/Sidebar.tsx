@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import LogoMark from "@/components/LogoMark";
 
 type NavItem = {
   label: string;
@@ -143,15 +144,11 @@ export default function Sidebar() {
         {/* Brand */}
         <div className="sidebar-brand">
           <div className="sidebar-logo">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect width="28" height="28" rx="8" fill="var(--brand-primary)" />
-              <path d="M8 14l4 4 8-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <LogoMark size={28} />
           </div>
           {!collapsed && (
             <div className="sidebar-brand-text">
               <span className="sidebar-brand-name">DhanPath</span>
-              <span className="sidebar-brand-badge">PRO</span>
             </div>
           )}
           <button
@@ -161,13 +158,13 @@ export default function Sidebar() {
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d={collapsed ? "M6 4l4 4-4 4" : "M10 4l-4 4 4 4"}
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <rect x="2.25" y="2.5" width="11.5" height="11" rx="2" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M6 2.8v10.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              {collapsed ? (
+                <path d="M9 6.2 10.8 8 9 9.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              ) : (
+                <path d="M10.8 6.2 9 8l1.8 1.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              )}
             </svg>
           </button>
         </div>
