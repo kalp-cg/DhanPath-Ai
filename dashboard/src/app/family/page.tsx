@@ -29,6 +29,20 @@ type Summary = {
     metadata: Record<string, unknown>;
     createdAt: string;
   }>;
+  auditPagination: {
+    page: number;
+    pageSize: number;
+    totalRecords: number;
+    totalPages: number;
+    hasPrev: boolean;
+    hasNext: boolean;
+  };
+  auditFilters: {
+    action: string;
+    actorId: string;
+    from: string;
+    to: string;
+  };
   selectedYear: number;
   selectedMonth: number;
   availableYears: number[];
@@ -106,6 +120,11 @@ export default function FamilyPage() {
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
   const [selectedMemberId, setSelectedMemberId] = useState("all");
   const [page, setPage] = useState(1);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditAction, setAuditAction] = useState("all");
+  const [auditActorId, setAuditActorId] = useState("all");
+  const [auditFrom, setAuditFrom] = useState("");
+  const [auditTo, setAuditTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -179,6 +198,12 @@ export default function FamilyPage() {
       memberId: selectedMemberId,
       page: String(page),
       pageSize: "10",
+      auditAction,
+      auditActorId,
+      auditFrom,
+      auditTo,
+      auditPage: String(auditPage),
+      auditPageSize: "10",
     });
 
     const res = await fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" });
@@ -229,6 +254,38 @@ export default function FamilyPage() {
             }),
           )
         : [],
+      auditPagination:
+        data.auditPagination && typeof data.auditPagination === "object"
+          ? {
+              page: Number(data.auditPagination.page ?? 1),
+              pageSize: Number(data.auditPagination.pageSize ?? 10),
+              totalRecords: Number(data.auditPagination.totalRecords ?? 0),
+              totalPages: Number(data.auditPagination.totalPages ?? 1),
+              hasPrev: Boolean(data.auditPagination.hasPrev),
+              hasNext: Boolean(data.auditPagination.hasNext),
+            }
+          : {
+              page: 1,
+              pageSize: 10,
+              totalRecords: 0,
+              totalPages: 1,
+              hasPrev: false,
+              hasNext: false,
+            },
+      auditFilters:
+        data.auditFilters && typeof data.auditFilters === "object"
+          ? {
+              action: String(data.auditFilters.action ?? "all"),
+              actorId: String(data.auditFilters.actorId ?? "all"),
+              from: String(data.auditFilters.from ?? ""),
+              to: String(data.auditFilters.to ?? ""),
+            }
+          : {
+              action: "all",
+              actorId: "all",
+              from: "",
+              to: "",
+            },
       selectedYear: Number(data.selectedYear ?? selectedYear),
       selectedMonth: Number(data.selectedMonth ?? selectedMonth),
       availableYears: Array.isArray(data.availableYears) ? data.availableYears : [selectedYear],
@@ -323,7 +380,17 @@ export default function FamilyPage() {
     };
 
     setSummary(normalized);
-  }, [page, selectedMemberId, selectedYear, selectedMonth]);
+  }, [
+    page,
+    selectedMemberId,
+    selectedYear,
+    selectedMonth,
+    auditAction,
+    auditActorId,
+    auditFrom,
+    auditTo,
+    auditPage,
+  ]);
 
   useEffect(() => {
     let mounted = true;
@@ -898,6 +965,65 @@ export default function FamilyPage() {
 
           <section className="panel">
             <h3>Recent Access Activity</h3>
+            <div className="filter-row audit-filter-row">
+              <label>
+                Action
+                <select
+                  value={auditAction}
+                  onChange={(e) => {
+                    setAuditAction(e.target.value);
+                    setAuditPage(1);
+                  }}
+                >
+                  <option value="all">All Actions</option>
+                  <option value="member_role_changed">Role Changed</option>
+                  <option value="member_removed">Member Removed</option>
+                  <option value="plan_changed">Plan Changed</option>
+                  <option value="invoice_exported">Invoice Exported</option>
+                  <option value="family_created">Family Created</option>
+                  <option value="family_joined">Family Joined</option>
+                </select>
+              </label>
+              <label>
+                Actor
+                <select
+                  value={auditActorId}
+                  onChange={(e) => {
+                    setAuditActorId(e.target.value);
+                    setAuditPage(1);
+                  }}
+                >
+                  <option value="all">All Members</option>
+                  {(summary?.members ?? []).map((member) => (
+                    <option key={member.userId} value={member.userId}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                From
+                <input
+                  type="date"
+                  value={auditFrom}
+                  onChange={(e) => {
+                    setAuditFrom(e.target.value);
+                    setAuditPage(1);
+                  }}
+                />
+              </label>
+              <label>
+                To
+                <input
+                  type="date"
+                  value={auditTo}
+                  onChange={(e) => {
+                    setAuditTo(e.target.value);
+                    setAuditPage(1);
+                  }}
+                />
+              </label>
+            </div>
             <ul className="list">
               {(summary?.recentAudit ?? []).map((entry) => (
                 <li key={entry.id}>
@@ -913,6 +1039,27 @@ export default function FamilyPage() {
                 </li>
               ))}
             </ul>
+            <div className="pager">
+              <button
+                type="button"
+                className="ghost"
+                disabled={!summary?.auditPagination?.hasPrev}
+                onClick={() => setAuditPage((prev) => Math.max(1, prev - 1))}
+              >
+                Previous
+              </button>
+              <span>
+                Page {summary?.auditPagination?.page ?? 1} of {summary?.auditPagination?.totalPages ?? 1} · Total {summary?.auditPagination?.totalRecords ?? 0}
+              </span>
+              <button
+                type="button"
+                className="ghost"
+                disabled={!summary?.auditPagination?.hasNext}
+                onClick={() => setAuditPage((prev) => prev + 1)}
+              >
+                Next
+              </button>
+            </div>
           </section>
 
           <section className="panel">

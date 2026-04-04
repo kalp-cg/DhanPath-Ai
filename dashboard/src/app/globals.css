@@ -222,6 +222,11 @@ select {
   gap: 12px;
 }
 
+.audit-filter-row {
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 10px;
+}
+
 .inline-form {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
@@ -396,6 +401,10 @@ select {
   }
 
   .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-filter-row {
     grid-template-columns: 1fr;
   }
 
