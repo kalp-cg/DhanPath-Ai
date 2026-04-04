@@ -11,10 +11,22 @@ type Summary = {
   topCategories: Array<{ category: string; amount: number }>;
 };
 
+type ActionPlan = {
+  focusCategory: string;
+  cutPercent: number;
+  goalAmount: number;
+  baselineMonthlySpend: number;
+  monthlySaving: number;
+  yearlySaving: number;
+  goalMonths: number | null;
+  updatedAt: string;
+};
+
 export default function BudgetPage() {
   const now = new Date();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [plan, setPlan] = useState<ActionPlan | null>(null);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedMemberId, setSelectedMemberId] = useState("all");
@@ -32,13 +44,22 @@ export default function BudgetPage() {
       page: "1",
       pageSize: "1",
     });
-    const res = await fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" });
-    if (!res.ok) {
+    const [summaryRes, planRes] = await Promise.all([
+      fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" }),
+      fetch("/api/family/action-plan", { cache: "no-store" }),
+    ]);
+
+    if (!summaryRes.ok) {
       setLoading(false);
       return;
     }
-    const data = await res.json().catch(() => ({}));
+    const data = await summaryRes.json().catch(() => ({}));
     setSummary(data as Summary);
+
+    if (planRes.ok) {
+      const planData = await planRes.json().catch(() => ({}));
+      setPlan((planData?.plan ?? null) as ActionPlan | null);
+    }
     setLoading(false);
   }, [selectedYear, selectedMonth, selectedMemberId]);
 
@@ -61,7 +82,11 @@ export default function BudgetPage() {
   }
 
   const spend = Number(summary.totalMonthlySpend ?? 0);
-  const suggestedBudget = spend > 0 ? spend * 1.15 : 10000;
+  const suggestedBudget = plan
+    ? Math.max(1000, plan.baselineMonthlySpend - plan.monthlySaving)
+    : spend > 0
+      ? spend * 1.15
+      : 10000;
   const usedPct = suggestedBudget > 0 ? Math.min(100, (spend / suggestedBudget) * 100) : 0;
   const remaining = Math.max(0, suggestedBudget - spend);
   const monthName = new Date(selectedYear, selectedMonth - 1, 1).toLocaleString("en-US", { month: "long" });
@@ -117,6 +142,20 @@ export default function BudgetPage() {
           <div className="kpi-card-value">{usedPct.toFixed(1)}%</div>
         </article>
       </div>
+
+      {plan && (
+        <div className="panel" style={{ padding: "var(--space-4) var(--space-6)", background: "linear-gradient(135deg, rgba(15, 118, 110, 0.06), rgba(14, 165, 233, 0.05))" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--space-2)", flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontWeight: 700 }}>Active Applied Plan</div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
+                Focus: {plan.focusCategory === "all" ? "Total Spend" : plan.focusCategory} · Cut {plan.cutPercent}% · Updated {new Date(plan.updatedAt).toLocaleString()}
+              </div>
+            </div>
+            <span className="chip chip--credit">Saving Target: {money.format(plan.monthlySaving)}/month</span>
+          </div>
+        </div>
+      )}
 
       <div className="panel">
         <div className="panel-header">

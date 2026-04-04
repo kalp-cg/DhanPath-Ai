@@ -72,6 +72,7 @@ export default function CommandCenterPage() {
   const [cutPercent, setCutPercent] = useState(15);
   const [goalAmount, setGoalAmount] = useState(100000);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const [applyStatus, setApplyStatus] = useState<"idle" | "saving" | "saved" | "failed">("idle");
 
   const money = useMemo(
     () =>
@@ -236,6 +237,40 @@ export default function CommandCenterPage() {
     setTimeout(() => setCopyStatus("idle"), 1500);
   }
 
+  async function applyPlan() {
+    if (!data) return;
+    setApplyStatus("saving");
+
+    const payload = {
+      focusCategory,
+      cutPercent,
+      goalAmount,
+      baselineMonthlySpend: baseAmount,
+      monthlySaving,
+      yearlySaving,
+      goalMonths,
+      notes: `Auto-generated from Command Center What-If Lab (${new Date().toISOString()})`,
+    };
+
+    try {
+      const res = await fetch("/api/family/action-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        setApplyStatus("failed");
+      } else {
+        setApplyStatus("saved");
+      }
+    } catch {
+      setApplyStatus("failed");
+    }
+
+    setTimeout(() => setApplyStatus("idle"), 1800);
+  }
+
   return (
     <div className="stack animate-slide">
       <section className="command-hero panel">
@@ -340,6 +375,15 @@ export default function CommandCenterPage() {
             <span>Goal ETA</span>
             <strong>{goalMonths === null ? "-" : `${goalMonths} months`}</strong>
           </article>
+        </div>
+
+        <div style={{ marginTop: "var(--space-4)", display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
+          <button className="btn btn--primary" onClick={applyPlan} type="button" disabled={applyStatus === "saving"}>
+            {applyStatus === "saving" ? "Applying..." : "Apply Plan to Family"}
+          </button>
+          {applyStatus === "saved" && <span className="chip chip--credit">Plan applied successfully</span>}
+          {applyStatus === "failed" && <span className="chip chip--debit">Failed to apply plan</span>}
+          <span className="chip chip--neutral">This updates Budget and Goals pages automatically.</span>
         </div>
       </section>
 
