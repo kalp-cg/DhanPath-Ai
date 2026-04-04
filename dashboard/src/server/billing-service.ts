@@ -9,7 +9,7 @@ export type PlanDef = {
   monthlyTxnLimit: number;
   maxMembers: number;
   monthlyPriceInr: number;
-  billingProvider: "none" | "razorpay";
+  billingProvider: "none" | "razorpay" | "stripe";
   isPaid: boolean;
   features: string[];
 };
@@ -30,20 +30,20 @@ export const PLAN_DEFS: PlanDef[] = [
     name: "Pro",
     monthlyTxnLimit: 2000,
     maxMembers: 8,
-    monthlyPriceInr: 299,
-    billingProvider: "razorpay",
+    monthlyPriceInr: 199,
+    billingProvider: "stripe",
     isPaid: true,
-    features: ["Advanced analytics", "Priority sync", "Extended history"],
+    features: ["Advanced analytics", "Priority sync", "Extended history", "3-month cycle"],
   },
   {
     id: "family_pro",
     name: "Family Pro",
     monthlyTxnLimit: 10000,
     maxMembers: 20,
-    monthlyPriceInr: 699,
-    billingProvider: "razorpay",
+    monthlyPriceInr: 299,
+    billingProvider: "stripe",
     isPaid: true,
-    features: ["All Pro features", "Large family usage", "Premium support"],
+    features: ["All Pro features", "Large family usage", "Premium support", "3-month cycle"],
   },
 ];
 
@@ -104,7 +104,7 @@ export async function getOrCreateSubscription(params: {
   }
 
   if (!sub.billingProvider) {
-    sub.billingProvider = sub.planId === "free" ? "none" : "razorpay";
+    sub.billingProvider = sub.planId === "free" ? "none" : "stripe";
   }
 
   if (!sub.lastPaymentStatus) {
