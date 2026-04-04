@@ -1,147 +1,217 @@
-# DhanPath
-Offline-first daily budget and expense tracker built with Flutter for Indian SMS transaction workflows.
+# DhanPath AI
 
-DhanPath answers one practical question every day:
-"How much can I spend today?"
+DhanPath AI is a full-stack personal and family finance platform built as a monorepo:
 
-## What DhanPath Is (Current Build)
+- A Flutter mobile app for SMS-first expense tracking and on-device finance workflows.
+- A Next.js dashboard for family-level analytics, billing, audit logs, CA pack generation, and founder-grade command center operations.
 
-DhanPath is a personal finance app (not a cloud family platform yet) that:
-- reads bank and UPI SMS locally on device,
-- extracts transaction details using parser rules,
-- keeps all data in local SQLite,
-- calculates daily budget in real time,
-- shows spending insights and reports,
-- provides app lock options (PIN/biometric where supported).
+The product vision is simple: convert raw transaction data into clear decisions, then into measurable action plans.
 
-## Core Features Available Now
+## Highlights
 
-### 1) SMS Auto-Detection (On Device)
-- Scans inbox and parses eligible financial SMS.
-- Supports Indian banking/UPI style transaction messages.
-- Full resync option is available to reprocess SMS with updated parsers.
-- Unrecognized SMS can be reviewed in-app.
+- Offline-first mobile expense tracking with SMS parsing and manual entries.
+- Family workspace dashboard with role-based access and invite flow.
+- Command Center with executive score, risk alerts, What-If Lab, and one-click plan application.
+- Budget and Goals pages linked to applied action plans.
+- Billing plans, subscription usage tracking, and invoice export.
+- Audit log APIs and exports for accountability.
+- CA Pack generation flow for shareable monthly reporting.
 
-### 2) Daily Budget Ring
-- Home screen shows daily spend status and budget left.
-- Budget updates as transactions are added from SMS or manual entries.
-- Helps daily spend decisions quickly.
+## Monorepo Structure
 
-### 3) Transactions and Activity
-- Add/edit/delete transactions.
-- View transaction history.
-- Basic filters and details screen.
-
-### 4) Insights and Reports
-- Monthly breakdown views.
-- Category-level spending views.
-- Weekly digest, spending story, and calendar/heatmap screens.
-
-### 5) Additional Tools
-- Savings goals.
-- Recurring bills.
-- Budget suggestion/planner.
-- Export and backup utilities (from app settings/tools).
-
-### 6) Privacy and Security
-- Offline-first architecture.
-- Local SQLite storage.
-- App lock flow with secure storage and biometric capability where available.
-
-## Navigation (Current)
-
-Bottom navigation tabs:
-- Home
-- Transactions
-- Insights
-- More
-
-More section includes reports, tools, settings, and help screens.
+```text
+DhanPathAi/
+  lib/                    Flutter app source
+  test/                   Flutter tests
+  dashboard/              Next.js dashboard (frontend + APIs)
+  docs/                   Planning and architecture docs
+  android/ ios/ web/ ...  Flutter platform folders
+```
 
 ## Tech Stack
 
+### Mobile App
+
 - Flutter / Dart
-- Provider (state management)
+- Provider
 - SQLite (`sqflite`)
-- Telephony/SMS parsing services
-- Local notifications
-- Secure storage + local auth
+- Telephony SMS parsing
+- Local auth + secure storage
+- Notifications and reporting/export utilities
 
-## Project Structure
+### Dashboard
 
-```text
-lib/
-  main.dart
-  models/
-  providers/
-  services/
-  core/
-    parsers/
-  screens/
-  widgets/
-  theme/
-```
+- Next.js App Router (TypeScript)
+- React 19
+- MongoDB + Mongoose
+- JWT cookie auth
+- ESLint + TypeScript strict checks
 
-## Getting Started
+## Key Product Areas
 
-### Prerequisites
-- Flutter SDK installed
-- Android SDK / emulator or physical Android device
+### Flutter App
 
-### Run locally
+- SMS transaction ingestion and parser-based extraction.
+- Daily budget ring and spending controls.
+- Transaction management and insights screens.
+- Monthly reports, tools, and security controls.
+
+### Dashboard
+
+- Auth (`/auth`) and family create/join.
+- Overview, Analytics, Transactions, Members, Audit, Billing.
+- Command Center (`/dashboard/command-center`) with:
+  - Executive score and tier.
+  - Risk radar.
+  - Founder playbook.
+  - What-If savings simulation.
+  - `Apply Plan to Family` workflow.
+- Budget and Goals consume the applied action plan automatically.
+
+## Local Setup
+
+## 1) Flutter App
+
+Prerequisites:
+
+- Flutter SDK
+- Android SDK or emulator/device
+
+Install and run:
 
 ```bash
+cd /home/xkalp/Desktop/DhanPathAi
 flutter pub get
 flutter run \
   --dart-define=SUPABASE_URL=your_supabase_url \
   --dart-define=SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### Run tests
+Run tests:
 
 ```bash
+cd /home/xkalp/Desktop/DhanPathAi
 flutter test
 ```
 
-## Android Permissions Used
+## 2) Dashboard
 
-- `READ_SMS` and `RECEIVE_SMS` for transaction detection
-- `POST_NOTIFICATIONS` for reminders/alerts (Android 13+)
-- `USE_BIOMETRIC` for biometric unlock
-- Other optional permissions as needed by specific tools/screens
+Prerequisites:
 
-## Current Product Positioning
+- Node.js 18+
+- MongoDB instance
 
-Use this positioning in demos and docs:
-- "Offline-first personal finance tracker"
-- "On-device SMS parsing + daily budget control"
+Install and run:
 
-Avoid claiming as shipped in current build:
-- cloud family sync backend,
-- parent-child shared finance workspace,
-- server-powered conversational AI assistant.
+```bash
+cd /home/xkalp/Desktop/DhanPathAi/dashboard
+npm install
+npm run dev
+```
 
-## Hackathon Build Track
+Open: `http://localhost:3000`
 
-The active hackathon execution roadmap is maintained in:
+Quality checks:
+
+```bash
+cd /home/xkalp/Desktop/DhanPathAi/dashboard
+npm run lint
+npm run build
+```
+
+## Environment Variables
+
+### Dashboard (`dashboard/.env`)
+
+Minimum required values:
+
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB=dhanpath
+JWT_SECRET=replace_with_long_random_secret
+```
+
+Optional billing/URLs:
+
+```env
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+CA_PACK_CRON_SECRET=
+```
+
+Security note: never commit real secrets or production credentials.
+
+## Important Dashboard APIs
+
+Auth:
+
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+
+Family:
+
+- `POST /api/family/create`
+- `POST /api/family/join`
+- `GET /api/family/summary`
+- `PATCH /api/family/members`
+- `DELETE /api/family/members`
+
+Transactions and reporting:
+
+- `GET /api/transactions`
+- `POST /api/transactions`
+- `GET /api/family/transactions/report`
+
+Audit and CA pack:
+
+- `GET /api/family/audit`
+- `GET /api/family/audit/export`
+- `GET /api/family/ca-pack/settings`
+- `POST /api/family/ca-pack/settings`
+- `POST /api/family/ca-pack/generate`
+
+Command Center and planning:
+
+- `GET /api/dashboard/command-center`
+- `GET /api/family/action-plan`
+- `POST /api/family/action-plan`
+
+## How the Action Plan Loop Works
+
+1. Founder opens Command Center.
+2. What-If Lab simulates savings based on spend/category cut percentage.
+3. Founder clicks `Apply Plan to Family`.
+4. API persists plan in `ActionPlan` collection.
+5. Budget and Goals pages immediately reflect applied targets and ETA.
+
+This creates a complete loop: insight -> decision -> execution -> tracking.
+
+## Permissions and Security
+
+- Family admin checks are enforced on sensitive endpoints.
+- Membership is reconciled server-side to avoid stale role drift.
+- JWT auth via HTTP-only cookie on dashboard.
+- Mobile app remains offline-first with local storage controls.
+
+## Troubleshooting
+
+- `403 admin access required` on dashboard:
+  verify you are owner/admin in current family and re-login.
+- `Missing JWT_SECRET` or `Missing MONGODB_URI`:
+  confirm `dashboard/.env` values.
+- Billing page stuck/loading:
+  ensure billing env keys are configured and API endpoint responds.
+- Parser mismatch on mobile:
+  run full SMS resync from app tools after parser updates.
+
+## Documentation
+
+- `dashboard/FRONTEND_ARCHITECTURE.md`
 - `docs/HACKATHON_DELIVERY_PLAN.md`
-
-Web dashboard module:
-- `dashboard/` (Next.js backend APIs + Supabase storage integration)
-
-This plan tracks the transition from offline personal finance app to:
-- Family workspace mode,
-- Forecast and runway insights,
-- AI assistant integration,
-- Demo-ready dashboard narrative.
-
-## Demo Flow (90 seconds)
-
-1. Open app and show daily budget ring.
-2. Trigger SMS sync and show found transactions.
-3. Open transaction history and filters.
-4. Show insights/report screen.
-5. End on privacy message: "All data stays on device."
+- `docs/OCEANLAB_HACKATHON_EXECUTION.md`
 
 ## License
 

@@ -47,5 +47,9 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Use microphone to add transactions using your voice.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>Convert your voice into transaction text for quick entry.</string>
 	</dict>
 </plist>
