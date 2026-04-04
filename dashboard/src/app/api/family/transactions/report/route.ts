@@ -6,6 +6,7 @@ import { Family } from "@/models/Family";
 import { Transaction } from "@/models/Transaction";
 import { User } from "@/models/User";
 import { writeAuditLog } from "@/server/audit-log";
+import { resolveFamilyAccess } from "@/server/family-access";
 
 function csvCell(value: string | number | null | undefined) {
   const text = String(value ?? "");
@@ -25,6 +26,13 @@ export async function GET(request: NextRequest) {
   }
 
   await connectToMongo();
+
+  const access = await resolveFamilyAccess(auth.userId);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  const activeMemberIds = access.members.map((member) => member.userId);
 
   const user = await User.findById(auth.userId);
   if (!user?.familyId) {
@@ -49,9 +57,17 @@ export async function GET(request: NextRequest) {
     type?: "debit" | "credit";
     category?: string;
     txnTime?: { $gte?: Date; $lte?: Date };
-  } = { familyId: user.familyId };
+  } = {
+    familyId: user.familyId,
+    userId: { $in: activeMemberIds },
+  };
 
-  if (memberId !== "all") query.userId = memberId;
+  if (memberId !== "all") {
+    if (!activeMemberIds.includes(memberId)) {
+      return NextResponse.json({ error: "member not found in family" }, { status: 404 });
+    }
+    query.userId = memberId;
+  }
   if (type === "debit" || type === "credit") query.type = type;
   if (category !== "all") query.category = category;
   if (from || to) {

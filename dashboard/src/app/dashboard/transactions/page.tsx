@@ -296,6 +296,7 @@ export default function TransactionsPage() {
                       <span style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{txn.merchant ?? txn.category}</span>
                       <span className={`chip chip--${txn.type === "credit" ? "credit" : "debit"}`}>{txn.type.toUpperCase()}</span>
                       <span className="chip chip--neutral">{txn.source}</span>
+                      <span className="chip chip--info">User: {txn.userName}</span>
                     </div>
                     <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
                       {txn.userName} · {txn.category} · {new Date(txn.txnTime).toLocaleString()}

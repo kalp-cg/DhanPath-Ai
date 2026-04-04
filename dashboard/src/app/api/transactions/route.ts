@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
+import { Types } from "mongoose";
 
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { Transaction } from "@/models/Transaction";
 import { User } from "@/models/User";
 import { getOrCreateSubscription, getUsageSnapshot } from "@/server/billing-service";
+import { resolveFamilyAccess } from "@/server/family-access";
 
 export async function GET(request: NextRequest) {
   const auth = getAuthUserFromRequest(request);
@@ -15,10 +17,16 @@ export async function GET(request: NextRequest) {
 
   await connectToMongo();
 
-  const user = await User.findById(auth.userId).lean();
-  if (!user?.familyId) {
-    return NextResponse.json({ error: "no family found for user" }, { status: 404 });
+  const access = await resolveFamilyAccess(auth.userId);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
   }
+
+  const user = access.user;
+  const activeMemberIds = access.members.map((member) => member.userId);
+  const activeMemberObjectIds = activeMemberIds
+    .filter((id) => Types.ObjectId.isValid(id))
+    .map((id) => new Types.ObjectId(id));
 
   const memberId = request.nextUrl.searchParams.get("memberId")?.trim() ?? "all";
   const type = request.nextUrl.searchParams.get("type")?.trim() ?? "all";
@@ -34,10 +42,42 @@ export async function GET(request: NextRequest) {
     type?: "debit" | "credit";
     category?: string;
     txnTime?: { $gte?: Date; $lte?: Date };
-  } = { familyId: user.familyId };
+  } = {
+    familyId: user.familyId,
+    userId: { $in: activeMemberObjectIds },
+  };
 
   if (memberId !== "all") {
-    query.userId = memberId;
+    if (!activeMemberIds.includes(memberId)) {
+      return NextResponse.json(
+        {
+          transactions: [],
+          peopleWise: {
+            totals: {
+              totalDebit: 0,
+              totalCredit: 0,
+              totalNet: 0,
+              totalTransactions: 0,
+            },
+            members: [],
+            trend: {
+              labels: [],
+              members: [],
+            },
+          },
+          pagination: {
+            page: 1,
+            pageSize,
+            totalTransactions: 0,
+            totalPages: 1,
+            hasPrev: false,
+            hasNext: false,
+          },
+        },
+        { status: 200 },
+      );
+    }
+    query.userId = new Types.ObjectId(memberId);
   }
 
   if (type === "debit" || type === "credit") {
@@ -96,11 +136,12 @@ export async function GET(request: NextRequest) {
     type: "debit";
   } = {
     familyId: user.familyId,
+    userId: { $in: activeMemberObjectIds },
     type: "debit",
   };
 
   if (memberId !== "all") {
-    trendQuery.userId = memberId;
+    trendQuery.userId = new Types.ObjectId(memberId);
   }
 
   if (category !== "all") {
