@@ -18,17 +18,28 @@ type Billing = {
 
 export default function BillingPage() {
   const [billing, setBilling] = useState<Billing | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const money = useMemo(() => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }), []);
 
   const fetchBilling = useCallback(async () => {
-    const now = new Date();
-    const params = new URLSearchParams({ year: String(now.getFullYear()), month: String(now.getMonth() + 1), memberId: "all", page: "1", pageSize: "1" });
-    const res = await fetch(`/api/family/summary?${params.toString()}`, { cache: "no-store" });
-    if (!res.ok) return;
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/billing/subscription", { cache: "no-store" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(String(body.error ?? "Unable to load billing details"));
+      setLoading(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
-    if (data.billing) setBilling(data.billing as Billing);
+    if (data.subscription) {
+      setBilling(data.subscription as Billing);
+    } else {
+      setError("Billing details are unavailable right now");
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => { fetchBilling(); }, [fetchBilling]);
@@ -43,13 +54,19 @@ export default function BillingPage() {
 
   async function exportInvoices() {
     const res = await fetch("/api/billing/invoices/export");
-    if (!res.ok) return;
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(String(body.error ?? "Could not export invoices"));
+      return;
+    }
     const blob = await res.blob(); const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "dhanpath-invoices.csv";
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
 
-  if (!billing) return <EmptyState icon="💎" title="Loading billing..." />;
+  if (loading) return <EmptyState icon="💎" title="Loading billing..." />;
+
+  if (!billing) return <EmptyState icon="💎" title="Billing unavailable" subtitle={error ?? "Try refreshing in a moment."} />;
 
   const usagePct = billing.usage.monthlyTxnLimit > 0 ? (billing.usage.used / billing.usage.monthlyTxnLimit) * 100 : 0;
 
