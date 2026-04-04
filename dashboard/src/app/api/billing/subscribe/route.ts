@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import { createPaymentLink } from "@/server/razorpay";
-import { getOrCreateSubscription, getPlan, isRazorpayConfigured, PLAN_DEFS } from "@/server/billing-service";
+import { getOrCreateSubscription, getPlan, PLAN_DEFS } from "@/server/billing-service";
+import { createCheckoutSession, isStripeConfigured } from "@/server/stripe";
 import { writeAuditLog } from "@/server/audit-log";
 
 export async function POST(request: NextRequest) {
@@ -82,29 +82,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!isRazorpayConfigured()) {
+  if (!isStripeConfigured()) {
     return NextResponse.json(
       { error: "payment gateway not configured" },
       { status: 503 },
     );
   }
 
-  const payment = await createPaymentLink({
-    amountInr: plan.monthlyPriceInr,
-    customerName: user.name,
-    customerEmail: user.email,
-    description: `DhanPath ${plan.name} monthly plan`,
-    notes: {
+  const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+  let payment: { id: string; url: string };
+  try {
+    payment = await createCheckoutSession({
+      amountInr: plan.monthlyPriceInr,
+      planId: plan.id,
+      planName: plan.name,
+      userEmail: user.email,
+      userName: user.name,
       familyId: String(user.familyId),
       userId: String(user._id),
-      targetPlanId: plan.id,
       previousPlanId,
-    },
-  });
+      successUrl: `${baseUrl}/dashboard/billing`,
+      cancelUrl: `${baseUrl}/dashboard/billing`,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error
+          ? `Stripe checkout failed: ${error.message}`
+          : "Stripe checkout failed",
+      },
+      { status: 502 },
+    );
+  }
 
   subscription.pendingPlanId = plan.id;
   subscription.status = "past_due";
-  subscription.billingProvider = "razorpay";
+  subscription.billingProvider = "stripe";
   subscription.externalPaymentId = payment.id;
   subscription.lastPaymentStatus = "pending";
   await subscription.save();
@@ -118,7 +131,7 @@ export async function POST(request: NextRequest) {
       toPlanId: plan.id,
       amountInr: plan.monthlyPriceInr,
       mode: "payment_initiated",
-      paymentLinkId: payment.id,
+      checkoutSessionId: payment.id,
     },
   });
 
@@ -127,7 +140,7 @@ export async function POST(request: NextRequest) {
       message: "payment required",
       requiresPayment: true,
       checkoutUrl: payment.url,
-      paymentLinkId: payment.id,
+      checkoutSessionId: payment.id,
       subscription: {
         planId: subscription.planId,
         pendingPlanId: subscription.pendingPlanId,
