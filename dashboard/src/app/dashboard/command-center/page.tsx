@@ -68,6 +68,10 @@ export default function CommandCenterPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<CommandCenterResponse | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [focusCategory, setFocusCategory] = useState("all");
+  const [cutPercent, setCutPercent] = useState(15);
+  const [goalAmount, setGoalAmount] = useState(100000);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   const money = useMemo(
     () =>
@@ -159,6 +163,13 @@ export default function CommandCenterPage() {
     return () => clearInterval(interval);
   }, [fetchCommandCenter, isAdmin]);
 
+  useEffect(() => {
+    if (!data) return;
+    if (focusCategory !== "all") return;
+    if ((data.topCategories30 ?? []).length === 0) return;
+    setFocusCategory(data.topCategories30[0].category);
+  }, [data, focusCategory]);
+
   if (loading) {
     return (
       <div className="stack">
@@ -193,6 +204,38 @@ export default function CommandCenterPage() {
     ...data.weeklySeries.map((item) => Math.max(item.spend, item.income)),
   );
 
+  const baseAmount =
+    focusCategory === "all"
+      ? data.metrics.spend30
+      : (data.topCategories30.find((item) => item.category === focusCategory)?.amount ?? data.metrics.spend30);
+  const monthlySaving = Number(((baseAmount * cutPercent) / 100).toFixed(0));
+  const yearlySaving = Number((monthlySaving * 12).toFixed(0));
+  const goalMonths = monthlySaving > 0 ? Math.ceil(goalAmount / monthlySaving) : null;
+
+  async function copyExecutiveSnapshot() {
+    if (!data) return;
+
+    const lines = [
+      `DhanPath Command Center Snapshot`,
+      `Family: ${data.family.name}`,
+      `Executive Score: ${data.executive.score}/100 (${data.executive.tier})`,
+      `Spend (30d): ${money.format(data.metrics.spend30)}`,
+      `Income (30d): ${money.format(data.metrics.income30)}`,
+      `Automation Rate: ${data.metrics.automationRate30}%`,
+      `Top Focus: ${focusCategory === "all" ? "Total Spend" : focusCategory}`,
+      `What-if Savings: ${money.format(monthlySaving)}/month, ${money.format(yearlySaving)}/year`,
+    ];
+
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+
+    setTimeout(() => setCopyStatus("idle"), 1500);
+  }
+
   return (
     <div className="stack animate-slide">
       <section className="command-hero panel">
@@ -215,6 +258,9 @@ export default function CommandCenterPage() {
           <span className="chip chip--brand">{data.billing.planName}</span>
           <span className="chip chip--neutral">{data.family.activeMembers30d}/{data.family.members} active in 30d</span>
           <span className="chip chip--warning">Quota {data.billing.usagePct}%</span>
+          <button className="btn btn--ghost btn--sm" onClick={copyExecutiveSnapshot} type="button">
+            {copyStatus === "copied" ? "Snapshot Copied" : copyStatus === "failed" ? "Copy Failed" : "Copy Snapshot"}
+          </button>
         </div>
       </section>
 
@@ -234,6 +280,68 @@ export default function CommandCenterPage() {
           </ol>
         </section>
       )}
+
+      <section className="panel">
+        <div className="panel-header">
+          <h3 className="panel-title">What-If Lab</h3>
+          <span className="panel-subtitle">Simulate savings outcomes instantly</span>
+        </div>
+        <div className="command-lab-grid">
+          <div className="form-group">
+            <label className="form-label">Focus Area</label>
+            <select className="form-select" value={focusCategory} onChange={(e) => setFocusCategory(e.target.value)}>
+              <option value="all">Total Spend</option>
+              {data.topCategories30.map((item) => (
+                <option key={item.category} value={item.category}>{item.category}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Cut Percentage: {cutPercent}%</label>
+            <input
+              className="form-input"
+              type="range"
+              min={5}
+              max={50}
+              step={1}
+              value={cutPercent}
+              onChange={(e) => setCutPercent(Number(e.target.value))}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Savings Goal</label>
+            <input
+              className="form-input"
+              type="number"
+              min={1000}
+              step={1000}
+              value={goalAmount}
+              onChange={(e) => setGoalAmount(Math.max(1000, Number(e.target.value) || 1000))}
+            />
+          </div>
+        </div>
+
+        <div className="command-lab-kpis">
+          <article className="command-lab-card">
+            <span>Baseline Monthly Spend</span>
+            <strong>{money.format(baseAmount)}</strong>
+          </article>
+          <article className="command-lab-card">
+            <span>Projected Monthly Savings</span>
+            <strong>{money.format(monthlySaving)}</strong>
+          </article>
+          <article className="command-lab-card">
+            <span>Projected Yearly Savings</span>
+            <strong>{money.format(yearlySaving)}</strong>
+          </article>
+          <article className="command-lab-card">
+            <span>Goal ETA</span>
+            <strong>{goalMonths === null ? "-" : `${goalMonths} months`}</strong>
+          </article>
+        </div>
+      </section>
 
       <div className="kpi-grid">
         <KPICard icon="spend" label="Spend (30d)" value={money.format(data.metrics.spend30)} variant="danger" />
