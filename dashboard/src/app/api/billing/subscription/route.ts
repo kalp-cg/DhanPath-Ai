@@ -6,6 +6,7 @@ import { Family } from "@/models/Family";
 import { User } from "@/models/User";
 import { getRazorpayPublicConfig } from "@/server/razorpay";
 import { getOrCreateSubscription, getPlan, getTrialMeta, getUsageSnapshot } from "@/server/billing-service";
+import { getStripePublicConfig } from "@/server/stripe";
 
 export async function GET(request: NextRequest) {
   const auth = getAuthUserFromRequest(request);
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
           externalPaymentId: subscription.externalPaymentId ?? null,
           lastPaymentAt: subscription.lastPaymentAt ?? null,
           razorpay: getRazorpayPublicConfig(),
+          stripe: getStripePublicConfig(),
         },
         usage,
         timeline,
