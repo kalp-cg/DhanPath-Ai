@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { writeAuditLog } from "@/server/audit-log";
 import { getOrCreateSubscription, getPlan } from "@/server/billing-service";
 
 function csvCell(value: string | number | null | undefined) {
@@ -63,6 +64,16 @@ export async function GET(request: NextRequest) {
 
   const filenameDate = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const filename = `dhanpath-billing-events-${filenameDate}.csv`;
+
+  await writeAuditLog({
+    familyId: user.familyId,
+    actorUserId: user._id,
+    action: "invoice_exported",
+    metadata: {
+      exportedRows: rows.length,
+      filename,
+    },
+  });
 
   return new NextResponse(csv, {
     status: 200,

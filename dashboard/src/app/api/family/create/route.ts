@@ -5,6 +5,7 @@ import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { Family } from "@/models/Family";
 import { User } from "@/models/User";
+import { writeAuditLog } from "@/server/audit-log";
 
 function makeInviteCode() {
   return randomBytes(3).toString("hex").toUpperCase();
@@ -43,6 +44,13 @@ export async function POST(request: NextRequest) {
 
   user.familyId = family._id;
   await user.save();
+
+  await writeAuditLog({
+    familyId: family._id,
+    actorUserId: user._id,
+    action: "family_created",
+    metadata: { familyName: family.name },
+  });
 
   return NextResponse.json(
     {

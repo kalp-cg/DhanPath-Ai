@@ -5,6 +5,7 @@ import { connectToMongo } from "@/lib/mongodb";
 import { Family } from "@/models/Family";
 import { User } from "@/models/User";
 import { getOrCreateSubscription } from "@/server/billing-service";
+import { writeAuditLog } from "@/server/audit-log";
 
 export async function POST(request: NextRequest) {
   const auth = getAuthUserFromRequest(request);
@@ -65,6 +66,13 @@ export async function POST(request: NextRequest) {
 
   user.familyId = family._id;
   await user.save();
+
+  await writeAuditLog({
+    familyId: family._id,
+    actorUserId: user._id,
+    action: "family_joined",
+    metadata: { inviteCode: family.inviteCode },
+  });
 
   return NextResponse.json(
     {

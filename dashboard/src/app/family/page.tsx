@@ -13,6 +13,22 @@ type Summary = {
   familyName: string;
   inviteCode: string;
   members: Array<{ userId: string; name: string; email: string; role: "admin" | "member" }>;
+  recentAudit: Array<{
+    id: string;
+    action:
+      | "member_role_changed"
+      | "member_removed"
+      | "plan_changed"
+      | "invoice_exported"
+      | "family_created"
+      | "family_joined";
+    actorUserId: string;
+    actorName: string;
+    targetUserId: string | null;
+    targetName: string | null;
+    metadata: Record<string, unknown>;
+    createdAt: string;
+  }>;
   selectedYear: number;
   selectedMonth: number;
   availableYears: number[];
@@ -186,6 +202,32 @@ export default function FamilyPage() {
             email: String(member.email ?? ""),
             role: member.role === "admin" ? "admin" : "member",
           }))
+        : [],
+      recentAudit: Array.isArray(data.recentAudit)
+        ? data.recentAudit.map(
+            (entry: {
+              id?: unknown;
+              action?: unknown;
+              actorUserId?: unknown;
+              actorName?: unknown;
+              targetUserId?: unknown;
+              targetName?: unknown;
+              metadata?: unknown;
+              createdAt?: unknown;
+            }) => ({
+              id: String(entry.id ?? ""),
+              action: (String(entry.action ?? "family_joined") as Summary["recentAudit"][number]["action"]),
+              actorUserId: String(entry.actorUserId ?? ""),
+              actorName: String(entry.actorName ?? "Unknown"),
+              targetUserId: entry.targetUserId ? String(entry.targetUserId) : null,
+              targetName: entry.targetName ? String(entry.targetName) : null,
+              metadata:
+                entry.metadata && typeof entry.metadata === "object"
+                  ? (entry.metadata as Record<string, unknown>)
+                  : {},
+              createdAt: String(entry.createdAt ?? ""),
+            }),
+          )
         : [],
       selectedYear: Number(data.selectedYear ?? selectedYear),
       selectedMonth: Number(data.selectedMonth ?? selectedMonth),
@@ -484,6 +526,33 @@ export default function FamilyPage() {
     return [next1, next2, next3];
   }, [analytics.projectedMonthEnd, money, summary]);
 
+  const canManageRole = useCallback(
+    (member: { userId: string; role: "admin" | "member" }) => {
+      const isCurrentUser = member.userId === summary?.currentUserId;
+      const isOwnerLike = member.userId === summary?.ownerUserId;
+      return !isOwnerLike && !(isCurrentUser && member.role === "admin");
+    },
+    [summary?.currentUserId, summary?.ownerUserId],
+  );
+
+  const canRemoveMember = useCallback(
+    (member: { userId: string }) => {
+      const isCurrentUser = member.userId === summary?.currentUserId;
+      const isOwnerLike = member.userId === summary?.ownerUserId;
+      return !isCurrentUser && !isOwnerLike;
+    },
+    [summary?.currentUserId, summary?.ownerUserId],
+  );
+
+  const actionLabelMap: Record<Summary["recentAudit"][number]["action"], string> = {
+    member_role_changed: "Role Changed",
+    member_removed: "Member Removed",
+    plan_changed: "Plan Changed",
+    invoice_exported: "Invoice Exported",
+    family_created: "Family Created",
+    family_joined: "Family Joined",
+  };
+
   return (
     <main className="shell family-shell">
       <section className="panel header-panel">
@@ -583,8 +652,6 @@ export default function FamilyPage() {
               <h3>Member Access Control</h3>
               <ul className="list member-admin-list">
                 {(summary?.members ?? []).map((member) => {
-                  const isCurrentUser = member.userId === summary.currentUserId;
-                  const isOwnerLike = member.userId === summary.ownerUserId;
                   return (
                     <li key={member.userId}>
                       <div className="list-main">
@@ -594,10 +661,11 @@ export default function FamilyPage() {
                         <small>Role: {member.role}</small>
                       </div>
                       <div className="member-actions">
+                        <small className="chip admin-only">Admin Only</small>
                         <button
                           type="button"
                           className="ghost"
-                          disabled={isOwnerLike || (isCurrentUser && member.role === "admin")}
+                          disabled={!canManageRole(member)}
                           onClick={() => changeMemberRole(member.userId, member.role === "admin" ? "member" : "admin")}
                         >
                           {member.role === "admin" ? "Make Member" : "Make Admin"}
@@ -605,7 +673,7 @@ export default function FamilyPage() {
                         <button
                           type="button"
                           className="ghost"
-                          disabled={isCurrentUser || isOwnerLike}
+                          disabled={!canRemoveMember(member)}
                           onClick={() => removeMember(member.userId)}
                         >
                           Remove
@@ -823,6 +891,25 @@ export default function FamilyPage() {
                     {event.note ? <small>{event.note}</small> : null}
                   </div>
                   <strong>{money.format(event.amountInr)}</strong>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="panel">
+            <h3>Recent Access Activity</h3>
+            <ul className="list">
+              {(summary?.recentAudit ?? []).map((entry) => (
+                <li key={entry.id}>
+                  <div className="list-main">
+                    <span>
+                      {entry.actorName}
+                      {entry.targetName ? ` -> ${entry.targetName}` : ""}
+                    </span>
+                    <small>{new Date(entry.createdAt).toLocaleString()}</small>
+                    <small className="chip neutral">{actionLabelMap[entry.action] ?? entry.action}</small>
+                  </div>
+                  <strong>{entry.actorUserId === summary?.currentUserId ? "You" : "Member"}</strong>
                 </li>
               ))}
             </ul>

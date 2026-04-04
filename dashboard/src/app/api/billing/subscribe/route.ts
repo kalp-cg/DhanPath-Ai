@@ -4,6 +4,7 @@ import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { getOrCreateSubscription, getPlan, PLAN_DEFS } from "@/server/billing-service";
+import { writeAuditLog } from "@/server/audit-log";
 
 export async function POST(request: NextRequest) {
   const auth = getAuthUserFromRequest(request);
@@ -43,6 +44,17 @@ export async function POST(request: NextRequest) {
     note: previousPlanId === plan.id ? "Plan re-confirmed" : "Plan changed",
   });
   await subscription.save();
+
+  await writeAuditLog({
+    familyId: user.familyId,
+    actorUserId: user._id,
+    action: "plan_changed",
+    metadata: {
+      fromPlanId: previousPlanId,
+      toPlanId: plan.id,
+      amountInr: plan.monthlyPriceInr,
+    },
+  });
 
   const savedPlan = getPlan(subscription.planId);
   return NextResponse.json(

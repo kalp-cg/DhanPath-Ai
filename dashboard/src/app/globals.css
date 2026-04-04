@@ -317,6 +317,16 @@ select {
   background: #def7e8;
 }
 
+.chip.admin-only {
+  color: #7c2d12;
+  background: #ffedd5;
+}
+
+.chip.neutral {
+  color: #334155;
+  background: #e2e8f0;
+}
+
 .member-pills {
   display: flex;
   flex-wrap: wrap;

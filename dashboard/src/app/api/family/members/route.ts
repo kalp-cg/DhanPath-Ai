@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Types } from "mongoose";
 
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { connectToMongo } from "@/lib/mongodb";
 import { Family } from "@/models/Family";
 import { User } from "@/models/User";
+import { writeAuditLog } from "@/server/audit-log";
 
 type FamilyMember = {
   userId: unknown;
@@ -74,6 +76,19 @@ export async function PATCH(request: NextRequest) {
   targetMember.role = role;
   await ctx.family.save();
 
+  await writeAuditLog({
+    familyId: ctx.family._id,
+    actorUserId: ctx.requester._id,
+    action: "member_role_changed",
+    targetUserId:
+      targetMember.userId instanceof Types.ObjectId
+        ? targetMember.userId
+        : new Types.ObjectId(String(targetMember.userId)),
+    metadata: {
+      newRole: role,
+    },
+  });
+
   const users = await User.find({ _id: { $in: ctx.members.map((m) => m.userId) } }).lean();
   const nameMap = new Map(users.map((u) => [String(u._id), u.name ?? "Member"]));
 
@@ -113,6 +128,16 @@ export async function DELETE(request: NextRequest) {
     ctx.family.save(),
     User.findByIdAndUpdate(targetUserId, { $unset: { familyId: 1 } }),
   ]);
+
+  await writeAuditLog({
+    familyId: ctx.family._id,
+    actorUserId: ctx.requester._id,
+    action: "member_removed",
+    targetUserId: new Types.ObjectId(targetUserId),
+    metadata: {
+      removedByAdmin: true,
+    },
+  });
 
   const users = await User.find({ _id: { $in: (ctx.family.members as FamilyMember[]).map((m) => m.userId) } }).lean();
   const nameMap = new Map(users.map((u) => [String(u._id), u.name ?? "Member"]));
