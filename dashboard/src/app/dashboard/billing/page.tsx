@@ -26,20 +26,40 @@ export default function BillingPage() {
   const fetchBilling = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/billing/subscription", { cache: "no-store" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(String(body.error ?? "Unable to load billing details"));
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const res = await fetch("/api/billing/subscription", {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setBilling(null);
+        setError(String(body.error ?? "Unable to load billing details"));
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (data.subscription) {
+        setBilling(data.subscription as Billing);
+      } else {
+        setBilling(null);
+        setError("Billing details are unavailable right now");
+      }
+    } catch (err) {
+      const message = err instanceof Error && err.name === "AbortError"
+        ? "Billing request timed out. Please refresh and try again."
+        : "Billing request failed. Please try again.";
+      setBilling(null);
+      setError(message);
+    } finally {
+      clearTimeout(timer);
       setLoading(false);
-      return;
     }
-    const data = await res.json().catch(() => ({}));
-    if (data.subscription) {
-      setBilling(data.subscription as Billing);
-    } else {
-      setError("Billing details are unavailable right now");
-    }
-    setLoading(false);
   }, []);
 
   useEffect(() => { fetchBilling(); }, [fetchBilling]);
