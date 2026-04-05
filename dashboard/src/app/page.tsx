@@ -55,6 +55,22 @@ export default async function HomePage() {
             </Link>
           </div>
 
+          <div className="landing-apk-card" aria-label="Android app download">
+            <div>
+              <p className="landing-apk-kicker">Android App</p>
+              <h3>Download DhanPath APK</h3>
+              <p>Install the latest mobile build directly from Google Drive.</p>
+            </div>
+            <Link
+              className="landing-btn landing-btn--solid landing-btn--apk"
+              href="https://drive.google.com/file/d/1lOVqoCiXeUpWeJeuGMRoteZfiW7KhR2i/view?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Download APK
+            </Link>
+          </div>
+
           <ul className="landing-proof-list" aria-label="Platform highlights">
             <li>
               <strong>99.9%</strong>

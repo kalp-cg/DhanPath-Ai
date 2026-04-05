@@ -1455,6 +1455,44 @@ a:hover { color: var(--brand-primary-hover); }
   max-width: 560px;
 }
 
+.landing-apk-card {
+  margin-top: var(--space-2);
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  border-radius: 16px;
+  background: linear-gradient(140deg, rgba(14, 165, 233, 0.1) 0%, rgba(15, 118, 110, 0.08) 100%);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.landing-apk-kicker {
+  margin-bottom: 3px;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #125f67;
+}
+
+.landing-apk-card h3 {
+  margin: 0;
+  color: #102c3d;
+  font-size: clamp(1rem, 0.92rem + 0.4vw, 1.2rem);
+}
+
+.landing-apk-card p {
+  margin: 0;
+  color: #3a5a6f;
+  font-size: 13px;
+}
+
+.landing-btn--apk {
+  flex-shrink: 0;
+  min-width: 150px;
+}
+
 .landing-proof-list {
   margin-top: var(--space-2);
   display: grid;
@@ -2967,6 +3005,15 @@ a:hover { color: var(--brand-primary-hover); }
   .landing-cta-row {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .landing-apk-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .landing-btn--apk {
+    width: 100%;
   }
 
   .landing-nav-actions .landing-btn,
