@@ -187,6 +187,8 @@ DhanPath-Ai/
 
 ## API Surface (Important)
 
+Published Postman docs: https://documenter.getpostman.com/view/39188593/2sBXwjxEkf
+
 ### Auth
 - POST /api/auth/signup
 - POST /api/auth/login

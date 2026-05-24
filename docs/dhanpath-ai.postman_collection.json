@@ -1,0 +1,1179 @@
+{
+  "info": {
+    "_postman_id": "0b9b5c55-8d0e-4f7b-a3bc-1f4a2c9d7e01",
+    "name": "DhanPath AI API",
+    "description": "Import this collection into Postman to test and publish API docs for the DhanPath AI Next.js dashboard API.\n\nSet `baseUrl` to your dashboard host, for example `http://localhost:3000`. Run Signup or Login first; both requests save `authToken` automatically from the JSON response.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "inviteCode",
+      "value": ""
+    },
+    {
+      "key": "memberId",
+      "value": ""
+    },
+    {
+      "key": "adviceId",
+      "value": ""
+    },
+    {
+      "key": "caPackToken",
+      "value": ""
+    },
+    {
+      "key": "checkoutSessionId",
+      "value": ""
+    },
+    {
+      "key": "cronSecret",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) pm.collectionVariables.set('authToken', json.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kalp Patel\",\n  \"email\": \"kalp@example.com\",\n  \"password\": \"secret123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "signup"
+              ]
+            },
+            "description": "Create a user account. Password must be at least 6 characters. Response includes `token` and also sets the `dhanpath_token` HTTP-only cookie."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) pm.collectionVariables.set('authToken', json.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"kalp@example.com\",\n  \"password\": \"secret123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with email and password. Response includes `token`; this collection stores it in `authToken`."
+          },
+          "response": []
+        },
+        {
+          "name": "Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Return the current authenticated user, or `{ user: null }` when no valid token is supplied."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Clear the `dhanpath_token` cookie."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Family",
+      "item": [
+        {
+          "name": "Create Family",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.family?.inviteCode) pm.collectionVariables.set('inviteCode', json.family.inviteCode);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Patel Family\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/family/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "create"
+              ]
+            },
+            "description": "Create a family for the logged-in user. The creator becomes admin."
+          },
+          "response": []
+        },
+        {
+          "name": "Join Family",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inviteCode\": \"{{inviteCode}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/family/join",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "join"
+              ]
+            },
+            "description": "Join an existing family using an invite code."
+          },
+          "response": []
+        },
+        {
+          "name": "Family Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/summary?year=2026&month=5&memberId=all&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2026"
+                },
+                {
+                  "key": "month",
+                  "value": "5"
+                },
+                {
+                  "key": "memberId",
+                  "value": "all"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Monthly family dashboard data, members, top categories, timeline, and recent transactions."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Member Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetUserId\": \"{{memberId}}\",\n  \"role\": \"member\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/family/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "members"
+              ]
+            },
+            "description": "Admin only. Change a family member role to `admin` or `member`."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/members?targetUserId={{memberId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "members"
+              ],
+              "query": [
+                {
+                  "key": "targetUserId",
+                  "value": "{{memberId}}"
+                }
+              ]
+            },
+            "description": "Admin only. Remove a non-owner family member."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions?memberId=all&type=all&category=all&from=2026-05-01&to=2026-05-31&page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "memberId",
+                  "value": "all"
+                },
+                {
+                  "key": "type",
+                  "value": "all",
+                  "description": "all, debit, credit"
+                },
+                {
+                  "key": "category",
+                  "value": "all"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-05-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-05-31"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Paginated transaction list with people-wise totals and six-month member trend."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 499,\n  \"type\": \"debit\",\n  \"category\": \"Food\",\n  \"merchant\": \"Cafe\",\n  \"source\": \"manual\",\n  \"txnTime\": \"2026-05-24T10:30:00.000Z\",\n  \"clientTxnId\": \"manual-food-499-20260524\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "transactions"
+              ]
+            },
+            "description": "Create one transaction. `type` accepts `debit`, `credit`, `expense`, or `income`; source accepts `sms`, `manual`, `vision`, or `voice`."
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Sync Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactions\": [\n    {\n      \"amount\": 1200,\n      \"type\": \"debit\",\n      \"category\": \"Groceries\",\n      \"merchant\": \"DMart\",\n      \"source\": \"sms\",\n      \"txnTime\": \"2026-05-23T15:00:00.000Z\",\n      \"clientTxnId\": \"sms-dmart-1200-20260523\"\n    },\n    {\n      \"amount\": 75000,\n      \"type\": \"credit\",\n      \"category\": \"Salary\",\n      \"merchant\": \"Employer\",\n      \"source\": \"sms\",\n      \"txnTime\": \"2026-05-01T03:30:00.000Z\",\n      \"clientTxnId\": \"sms-salary-75000-20260501\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "transactions"
+              ]
+            },
+            "description": "Bulk upsert transactions by `clientTxnId`; response includes synced, duplicates, truncated, and skipped counts."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Transactions Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/transactions/report?memberId=all&type=all&category=all&from=2026-05-01&to=2026-05-31&format=csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "transactions",
+                "report"
+              ],
+              "query": [
+                {
+                  "key": "memberId",
+                  "value": "all"
+                },
+                {
+                  "key": "type",
+                  "value": "all"
+                },
+                {
+                  "key": "category",
+                  "value": "all"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-05-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-05-31"
+                },
+                {
+                  "key": "format",
+                  "value": "csv",
+                  "description": "csv or html"
+                }
+              ]
+            },
+            "description": "Export filtered transactions as CSV, or HTML when `format=html`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Billing",
+      "item": [
+        {
+          "name": "Plans",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/billing/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "billing",
+                "plans"
+              ]
+            },
+            "description": "Public plan definitions and public payment gateway config."
+          },
+          "response": []
+        },
+        {
+          "name": "Subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/billing/subscription",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "billing",
+                "subscription"
+              ]
+            },
+            "description": "Current family subscription, limits, payment state, usage, and billing timeline."
+          },
+          "response": []
+        },
+        {
+          "name": "Subscribe",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.checkoutSessionId) pm.collectionVariables.set('checkoutSessionId', json.checkoutSessionId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"pro\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/billing/subscribe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "billing",
+                "subscribe"
+              ]
+            },
+            "description": "Change plan. `free` is applied directly; paid plans return Stripe checkout details when configured."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Stripe Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{checkoutSessionId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/billing/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "billing",
+                "confirm"
+              ]
+            },
+            "description": "Confirm a paid Stripe checkout session and activate the pending plan."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Billing Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/billing/invoices/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "billing",
+                "invoices",
+                "export"
+              ]
+            },
+            "description": "Download billing event history as CSV."
+          },
+          "response": []
+        },
+        {
+          "name": "Razorpay Webhook",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-razorpay-signature",
+                "value": "replace-with-signature"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"payment_link.paid\",\n  \"payload\": {\n    \"payment_link\": {\n      \"entity\": {\n        \"id\": \"plink_test\",\n        \"notes\": {\n          \"familyId\": \"replace-family-id\",\n          \"userId\": \"replace-user-id\",\n          \"targetPlanId\": \"pro\",\n          \"previousPlanId\": \"free\"\n        }\n      }\n    },\n    \"payment\": {\n      \"entity\": {\n        \"id\": \"pay_test\",\n        \"status\": \"captured\"\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/billing/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "billing",
+                "webhook"
+              ]
+            },
+            "description": "Razorpay webhook endpoint. Requires a valid `x-razorpay-signature`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Insights and AI",
+      "item": [
+        {
+          "name": "Command Center",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/command-center",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "command-center"
+              ]
+            },
+            "description": "Admin-only executive finance metrics, alerts, score, and playbook."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Action Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/action-plan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "action-plan"
+              ]
+            },
+            "description": "Fetch the saved family action plan."
+          },
+          "response": []
+        },
+        {
+          "name": "Save Action Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"focusCategory\": \"Food\",\n  \"cutPercent\": 15,\n  \"goalAmount\": 50000,\n  \"baselineMonthlySpend\": 12000,\n  \"monthlySaving\": 1800,\n  \"yearlySaving\": 21600,\n  \"goalMonths\": 28,\n  \"notes\": \"Reduce restaurant spending and review weekly.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/family/action-plan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "action-plan"
+              ]
+            },
+            "description": "Admin only. Create or update the active family action plan."
+          },
+          "response": []
+        },
+        {
+          "name": "AI Advisor History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/advisor?page=1&pageSize=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "advisor"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List the current user's AI advisor chat history and quota."
+          },
+          "response": []
+        },
+        {
+          "name": "Create AI Advice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.item?._id) pm.collectionVariables.set('adviceId', json.item._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatName\": \"Buy phone 50k in 4 months\",\n  \"prompt\": \"I want to buy a phone worth 50000 in 4 months. Can my family budget support this?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/advisor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "advisor"
+              ]
+            },
+            "description": "Generate AI finance advice from transaction history. Requires a valid amount and timeline in chatName or prompt."
+          },
+          "response": []
+        },
+        {
+          "name": "Pin AI Advice",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adviceId\": \"{{adviceId}}\",\n  \"pinned\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/advisor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "advisor"
+              ]
+            },
+            "description": "Pin or unpin an AI advisor chat."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete AI Advice",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adviceId\": \"{{adviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/advisor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "advisor"
+              ]
+            },
+            "description": "Soft-delete an AI advisor chat."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Audit",
+      "item": [
+        {
+          "name": "List Audit Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/audit?action=all&actorId=all&from=2026-05-01&to=2026-05-31&page=1&pageSize=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "all"
+                },
+                {
+                  "key": "actorId",
+                  "value": "all"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-05-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-05-31"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "15"
+                }
+              ]
+            },
+            "description": "Admin only. Paginated family audit log."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Audit CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/audit/export?auditAction=all&auditActorId=all&auditFrom=2026-05-01&auditTo=2026-05-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "audit",
+                "export"
+              ],
+              "query": [
+                {
+                  "key": "auditAction",
+                  "value": "all"
+                },
+                {
+                  "key": "auditActorId",
+                  "value": "all"
+                },
+                {
+                  "key": "auditFrom",
+                  "value": "2026-05-01"
+                },
+                {
+                  "key": "auditTo",
+                  "value": "2026-05-31"
+                }
+              ]
+            },
+            "description": "Admin only. Download audit events as CSV."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CA Pack",
+      "item": [
+        {
+          "name": "Get CA Pack Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/ca-pack/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "ca-pack",
+                "settings"
+              ]
+            },
+            "description": "Admin only. Fetch monthly CA pack schedule settings."
+          },
+          "response": []
+        },
+        {
+          "name": "Save CA Pack Settings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caEmail\": \"ca@example.com\",\n  \"dayOfMonth\": 5,\n  \"includeAudit\": true,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/family/ca-pack/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "ca-pack",
+                "settings"
+              ]
+            },
+            "description": "Admin only. Save monthly CA pack schedule settings. `dayOfMonth` must be between 1 and 28."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate CA Pack",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.pack?.token) pm.collectionVariables.set('caPackToken', json.pack.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"year\": 2026,\n  \"month\": 5,\n  \"includeAudit\": true,\n  \"expiresDays\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/family/ca-pack/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "ca-pack",
+                "generate"
+              ]
+            },
+            "description": "Admin only. Generate a share token and links for CA pack CSV and HTML/PDF view."
+          },
+          "response": []
+        },
+        {
+          "name": "Run Due CA Pack Cron",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-ca-pack-cron-secret",
+                "value": "{{cronSecret}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/ca-pack/run-due",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "ca-pack",
+                "run-due"
+              ]
+            },
+            "description": "Cron endpoint. Requires `x-ca-pack-cron-secret` matching `CA_PACK_CRON_SECRET`."
+          },
+          "response": []
+        },
+        {
+          "name": "Download CA Pack CSV",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/ca-pack/{{caPackToken}}/csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "ca-pack",
+                "{{caPackToken}}",
+                "csv"
+              ]
+            },
+            "description": "Public token-based CSV export. No auth token required; token must be valid and unexpired."
+          },
+          "response": []
+        },
+        {
+          "name": "View CA Pack HTML",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/family/ca-pack/{{caPackToken}}/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "family",
+                "ca-pack",
+                "{{caPackToken}}",
+                "pdf"
+              ]
+            },
+            "description": "Public token-based HTML report view intended for printing or saving as PDF. No auth token required."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
